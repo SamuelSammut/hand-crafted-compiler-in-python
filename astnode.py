@@ -10,8 +10,13 @@ class ASTStatementNode(ASTNode):
 
 
 class ASTExpressionNode(ASTNode):
-    def __init__(self):
+    def __init__(self, simple_expressions, Type=None):
         self.name = "ASTExpressionNode"
+        self.simple_expressions = simple_expressions
+        self.Type = Type
+
+    def accept(self, visitor):
+        visitor.visit_expression_node(self)
 
 
 class ASTSubExpressionNode(ASTExpressionNode):
@@ -22,6 +27,7 @@ class ASTSubExpressionNode(ASTExpressionNode):
     def accept(self, visitor):
         visitor.visit_sub_expression_node(self)
 
+
 class ASTFactorNode(ASTExpressionNode):
     def __init__(self, factor):
         self.name = "ASTFactorNode"
@@ -29,6 +35,7 @@ class ASTFactorNode(ASTExpressionNode):
 
     def accept(self, visitor):
         visitor.visit_factor_node(self)
+
 
 class ASTUnaryNode(ASTExpressionNode):
     def __init__(self, expr):
@@ -46,6 +53,24 @@ class ASTActualParams(ASTExpressionNode):
 
     def accept(self, visitor):
         visitor.visit_actual_params_node(self)
+
+
+class ASTTermNode(ASTExpressionNode):
+    def __init__(self, factor):
+        self.name = "ASTTermNode"
+        self.factor = factor
+
+    def accept(self, visitor):
+        visitor.visit_term_node(self)
+
+
+class ASTSimpleExpressionNode(ASTExpressionNode):
+    def __init__(self, term):
+        self.name = "ASTSimpleExpressionNode"
+        self.term = term
+
+    def accept(self, visitor):
+        visitor.visit_simple_expression_node(self)
 
 
 class ASTFunctionCallNode(ASTExpressionNode):
@@ -142,6 +167,15 @@ class ASTPadWidthLiteralNode(ASTLiteralNode):
         visitor.visit_pad_width_literal_node(self)
 
 
+class ASTTypeNode(ASTLiteralNode):
+    def __init__(self, value):
+        self.name = "ASTTypeNode"
+        self.value = value
+
+    def accept(self, visitor):
+        visitor.visit_type_node(self)
+
+
 class ASTPadHeightLiteralNode(ASTLiteralNode):
     def __init__(self, value):
         self.name = "ASTPadHeightLiteralNode"
@@ -204,6 +238,9 @@ class ASTVisitor:
     def visit_padrandi_node(self, node):
         raise NotImplementedError()
 
+    def visit_type_node(self, node):
+        raise NotImplementedError
+
     def visit_block_node(self, node):
         raise NotImplementedError()
 
@@ -226,10 +263,20 @@ class ASTVisitor:
         raise NotImplementedError()
 
     def visit_unary_node(self, node):
-        raise  NotImplementedError()
+        raise NotImplementedError()
 
     def visit_factor_node(self, node):
-        raise  NotImplementedError
+        raise NotImplementedError
+
+    def visit_term_node(self, node):
+        raise NotImplementedError
+
+    def visit_simple_expression_node(self, node):
+        raise NotImplementedError
+
+    def visit_expression_node(self, node):
+        raise NotImplementedError
+
 
 class PrintNodesVisitor(ASTVisitor):
     def __init__(self):
@@ -311,6 +358,14 @@ class PrintNodesVisitor(ASTVisitor):
         literal_node.literal.accept(self)
         self.dec_tab_count()
 
+    def visit_type_node(self, type_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Type node => ")
+        self.inc_tab_count()
+        type_node.value.accept(self)
+        self.dec_tab_count()
+
+
     def visit_actual_params_node(self, actual_params_node):
         self.node_count += 1
         print('\t' * self.tab_count, "Actual Params node => ")
@@ -318,6 +373,7 @@ class PrintNodesVisitor(ASTVisitor):
         for param in actual_params_node.actual_params:
             param.accept(self)
         self.dec_tab_count()
+
 
     def visit_function_call_node(self, function_call_node):
         self.node_count += 1
@@ -350,6 +406,31 @@ class PrintNodesVisitor(ASTVisitor):
         factor_node.factor.accept(self)
         self.dec_tab_count()
 
+    def visit_term_node(self, term_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Term node => ")
+        self.inc_tab_count()
+        for term in term_node.factor:
+            term.accept(self)
+        self.dec_tab_count()
+
+    def visit_simple_expression_node(self, simple_expression_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Simple expression node => ")
+        self.inc_tab_count()
+        for simple_expr in simple_expression_node.term:
+            simple_expr.accept(self)
+        self.dec_tab_count()
+
+    def visit_expression_node(self, expression_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Expression node => ")
+        self.inc_tab_count()
+        for simple_expr in expression_node.simple_expressions:
+            simple_expr.accept(self)
+        if expression_node.Type is not None:
+            expression_node.Type.accept(self)
+        self.dec_tab_count()
 #
 # # Create a print visitor instance
 # print_visitor = PrintNodesVisitor()

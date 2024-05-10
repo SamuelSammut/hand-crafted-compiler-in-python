@@ -31,8 +31,10 @@ class Parser:
         self.index += 1  # Grab the next token
         if self.index < len(self.tokens):
             self.crtToken = self.tokens[self.index]
+            self.nextToken = self.PeekNextToken()  # Update next token
         else:
             self.crtToken = lex.Token(lex.TokenType.END, "END")
+            self.nextToken = lex.Token(lex.TokenType.END, "END")
 
     def NextToken(self):
         self.NextTokenSkipWS()
@@ -108,11 +110,31 @@ class Parser:
         return ast.ASTActualParams(actualParams)
 
     def ParseExpression(self):
-        # for now we'll assume an expression can only be an integer
-        if self.crtToken.type == lex.TokenType.INTEGER_LITERAL:
-            value = self.crtToken.lexeme
+        simpleExpressions = []
+        simpleExpression1 = self.ParseSimpleExpression()
+        if simpleExpression1 is None:
+            raise Exception("Expected a simple expression to start parsing an expression")
+        simpleExpressions.append(simpleExpression1)
+        while self.crtToken == lex.TokenType.RELATIONAL_OPERAND:
             self.NextToken()
-            return ast.ASTIntegerLiteralNode(value)
+            simpleExpressionN = self.ParseSimpleExpression()
+            if simpleExpressionN is None:
+                raise Exception("No simple expression following relational operand in expression parsing.")
+            simpleExpressions.append(simpleExpressionN)
+        self.NextToken()
+        if self.crtToken.type == lex.TokenType.AS and self.nextToken.type == lex.TokenType.TYPE:
+            self.NextToken()
+            Type = ast.ASTTypeNode(self.crtToken.lexeme)
+            if Type is None:
+                raise Exception("Expected 'AS' keyword and Type after simple expression.")
+            else:
+                return ast.ASTExpressionNode(simpleExpressions, Type)
+        else:
+            return ast.ASTExpressionNode(simpleExpressions)
+
+
+
+
 
     def ParsePadRead(self):
         if self.crtToken.type == lex.TokenType.PAD_READ:
@@ -177,18 +199,13 @@ class Parser:
         elif self.crtToken.type == lex.TokenType.RANDOM_INT:
             factor = self.ParsePadRandI()
         elif self.crtToken.type == lex.TokenType.IDENTIFIER:
-            self.nextToken = self.crtToken
-            if self.NextTokenSkipWS() == lex.TokenType.LEFT_ROUND_BRACKET:
+            if self.nextToken.type == lex.TokenType.LEFT_ROUND_BRACKET:
                 factor = self.ParseFunctionCall()
-            elif self.crtToken.type == lex.TokenType.END:
-                factor = ast.ASTIdentifierNode(self.crtToken.lexeme)
-                self.NextToken()
-                print("Variable Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
             else:
-                raise Exception("Encountered error while parsing factor: After an identifier, only a left round "
-                                "bracket is expected")
+                factor = ast.ASTIdentifierNode(self.crtToken.lexeme)
+                self.NextToken()  # Consume the current token
+                print("Variable Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
         return ast.ASTFactorNode(factor)
-
     def ParseAssignment(self):
         # Assignment is made up of two main parts; the LHS (the variable) and RHS (the expression)
         if self.crtToken.type == lex.TokenType.IDENTIFIER:
@@ -208,8 +225,36 @@ class Parser:
 
         return ast.ASTAssignmentNode(assignment_lhs, assignment_rhs)
 
+    def ParseTerm(self):
+        factors = []
+        factor1 = self.ParseFactor()
+        factors.append(factor1)
+        if factor1 is None:
+            raise Exception("Initial factor empty when parsing terms.")
+        while self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
+            self.NextToken()
+            factorN = self.ParseFactor()
+            if factorN is None:
+                raise Exception("No factor following multiplicative operand in term parsing.")
+            factors.append(factorN)
+        return ast.ASTTermNode(factors)
+
+    def ParseSimpleExpression(self):
+        terms = []
+        term1 = self.ParseTerm()
+        terms.append(term1)
+        if term1 is None:
+            raise Exception("Initial term empty when parsing simple expression.")
+        while self.crtToken.type == lex.TokenType.ADDITIVE_OPERAND:
+            self.NextToken()
+            termsN = self.ParseTerm()
+            if termsN is None:
+                raise Exception("No term following additive operand in simple expression parsing.")
+            terms.append(termsN)
+        return ast.ASTSimpleExpressionNode(terms)
+
     def ParseStatement(self):
-        return self.ParseFactor()
+        return self.ParseExpression()
         # if self.crtToken.type in [lex.TokenType.BOOLEAN_LITERAL, lex.TokenType.INTEGER_LITERAL,
         #                           lex.TokenType.FLOAT_LITERAL, lex.TokenType.COLOUR_LITERAL,
         #                           lex.TokenType.PAD_WIDTH, lex.TokenType.PAD_HEIGHT, lex.TokenType.PAD_READ]:
@@ -246,7 +291,7 @@ class Parser:
         self.ASTroot = self.ParseProgram()
 
 
-parser = Parser(" vall(22);")
+parser = Parser(" xyz * 32.3 - __width / 2 == 2 as bool ;")
 parser.Parse()
 
 print_visitor = ast.PrintNodesVisitor()
