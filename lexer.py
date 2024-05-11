@@ -105,6 +105,8 @@ def GetTokenTypeByFinalState(state, lexeme):
         return Token(TokenType.FUN, lexeme)
     elif state == 140:
         return Token(TokenType.LET, lexeme)
+    elif state == 145:
+        return Token(TokenType.ELSE, lexeme)
     elif state == 146:
         return Token(TokenType.COMMA, lexeme)
     elif state == 147:
@@ -651,11 +653,23 @@ class Lexer:
              self.Tx[160][self.lexeme_list.index(letter)] = 53
         self.Tx[160][self.lexeme_list.index("s_letter")] = 161
 
+        # else
+        self.Tx[0][self.lexeme_list.index("e_letter")] = 141
+
+        for letter in self.all_except_e:
+             self.Tx[141][self.lexeme_list.index(letter)] = 53
+        self.Tx[141][self.lexeme_list.index("l_letter")] = 142
+        for letter in self.all_except_s:
+             self.Tx[142][self.lexeme_list.index(letter)] = 53
+        self.Tx[142][self.lexeme_list.index("s_letter")] = 143
+        for letter in self.all_except_e:
+             self.Tx[143][self.lexeme_list.index(letter)] = 53
+        self.Tx[143][self.lexeme_list.index("e_letter")] = 145
         for letter in self.needed_letters_list:
-            self.Tx[161][self.lexeme_list.index(letter)] = 53
-        self.Tx[161][self.lexeme_list.index("letter")] = 53
-        self.Tx[161][self.lexeme_list.index("digit")] = 53
-        self.Tx[161][self.lexeme_list.index("_")] = 53
+            self.Tx[145][self.lexeme_list.index(letter)] = 53
+        self.Tx[145][self.lexeme_list.index("letter")] = 53
+        self.Tx[145][self.lexeme_list.index("digit")] = 53
+        self.Tx[145][self.lexeme_list.index("_")] = 53
 
         # Symbols
         self.Tx[0][self.lexeme_list.index(",")] = 146
@@ -669,7 +683,7 @@ class Lexer:
         self.Tx[0][self.lexeme_list.index("}")] = 156
 
         # Catch needed letters in starting state
-        catch_letters = ["d", "e", "g", "h", "m", "o", "p", "s", "u", "x", "y"]
+        catch_letters = ["d", "g", "h", "m", "o", "p", "s", "u", "x", "y"]
         for letter in catch_letters:
             self.Tx[0][self.lexeme_list.index(letter + "_letter")] = 53
 
@@ -787,10 +801,10 @@ class Lexer:
         return tokens_list
 
 
-# lex = Lexer()
-# toks = lex.GenerateTokens(" not")
-#
-# for t in toks:
-#     print(t.type, t.lexeme)
+lex = Lexer()
+toks = lex.GenerateTokens(" else1")
+
+for t in toks:
+    print(t.type, t.lexeme)
 
 

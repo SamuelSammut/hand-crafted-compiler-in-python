@@ -5,8 +5,24 @@ class ASTNode:
 
 
 class ASTStatementNode(ASTNode):
-    def __init__(self):
+    def __init__(self, statement):
         self.name = "ASTStatementNode"
+        self.statement = statement
+
+    def accept(self, visitor):
+        visitor.visit_statement_node(self)
+
+
+class ASTProgramNode(ASTNode):
+    def __init__(self):
+        self.name = "ASTProgramNode"
+        self.stmts = []
+
+    def add_statement(self, node):
+        self.stmts.append(node)
+
+    def accept(self, visitor):
+        visitor.visit_program_node(self)
 
 
 class ASTExpressionNode(ASTNode):
@@ -139,6 +155,16 @@ class ASTPadRandINode(ASTStatementNode):
 
     def accept(self, visitor):
         visitor.visit_padrandi_node(self)
+class ASTForStatementNode(ASTStatementNode):
+    def __init__(self, expr, block, variable_dec=None, assign=None):
+        self.name = "ASTForStatementNode"
+        self.variable_dec = variable_dec
+        if assign is not None:
+            self.assign = assign
+        self.expr = expr
+        self.block = block
+    def accept(self, visitor):
+        visitor.visit_for_statement_node(self)
 
 
 class ASTAssignmentNode(ASTStatementNode):
@@ -196,6 +222,17 @@ class ASTVariableDeclarationNode(ASTVariableDeclarationSuffixNode):
 
     def accept(self, visitor):
         visitor.visit_variable_declaration_node(self)
+
+
+class ASTIfStatementNode(ASTStatementNode):
+    def __init__(self, ast_expression_node, ast_block1_node, ast_block2_node=None):
+        if ast_block2_node is not None:
+            self.block2 = ast_block2_node
+        self.name = "ASTIfStatementNode"
+        self.expression = ast_expression_node
+        self.block1 = ast_block1_node
+    def accept(self, visitor):
+        visitor.visit_if_statement_node(self)
 
 
 class ASTFloatLiteralNode(ASTLiteralNode):
@@ -295,12 +332,17 @@ class ASTVisitor:
 
     def visit_padrandi_node(self, node):
         raise NotImplementedError()
+    def visit_for_statement_node(self, node):
+        raise NotImplementedError
 
     def visit_type_node(self, node):
         raise NotImplementedError
 
     def visit_block_node(self, node):
         raise NotImplementedError()
+
+    def visit_program_node(self, node):
+        raise NotImplementedError
 
     def inc_tab_count(self):
         raise NotImplementedError()
@@ -341,6 +383,9 @@ class ASTVisitor:
     def visit_variable_declaration_node(self, node):
         raise NotImplementedError
 
+    def visit_if_statement_node(self, node):
+        raise NotImplementedError
+
     def visit_print_statement_node(self, node):
         raise NotImplementedError
 
@@ -352,6 +397,9 @@ class ASTVisitor:
 
     def visit_write_statement_node(self, node):
         raise NotImplementedError
+    def visit_statement_node(self, node):
+        raise NotImplementedError
+
 
 class PrintNodesVisitor(ASTVisitor):
     def __init__(self):
@@ -411,6 +459,15 @@ class PrintNodesVisitor(ASTVisitor):
 
         self.dec_tab_count()
 
+    def visit_program_node(self, program_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "New Program => ")
+        self.inc_tab_count()
+
+        for st in program_node.stmts:
+            st.accept(self)
+
+        self.dec_tab_count()
     def visit_padread_node(self, padread_node):
         self.node_count += 1
         print('\t' * self.tab_count, "PadRead node => ")
@@ -527,6 +584,16 @@ class PrintNodesVisitor(ASTVisitor):
         variable_declaration_node.expr.accept(self)
         self.dec_tab_count()
 
+    def visit_if_statement_node(self, if_statement_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "If statement node => ")
+        self.inc_tab_count()
+        if_statement_node.expression.accept(self)
+        if_statement_node.block1.accept(self)
+        if if_statement_node.block2 is not None:
+            if_statement_node.block2.accept(self)
+        self.dec_tab_count()
+
     def visit_print_statement_node(self, print_statement_node):
         self.node_count += 1
         print('\t' * self.tab_count, "Print statement node => ")
@@ -547,6 +614,26 @@ class PrintNodesVisitor(ASTVisitor):
         self.inc_tab_count()
         return_statement_node.expr.accept(self)
         self.dec_tab_count()
+
+    def visit_statement_node(self, statement_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Statement node => ")
+        self.inc_tab_count()
+        statement_node.statement.accept(self)
+        self.dec_tab_count()
+
+    def visit_for_statement_node(self, for_statement_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "For statement node => ")
+        self.inc_tab_count()
+        if for_statement_node.variable_dec is not None:
+            for_statement_node.variable_dec.accept(self)
+        if for_statement_node.assign is not None:
+            for_statement_node.assign.accept(self)
+        for_statement_node.expr.accept(self)
+        for_statement_node.block.accept(self)
+        self.dec_tab_count()
+
 #
 # # Create a print visitor instance
 # print_visitor = PrintNodesVisitor()

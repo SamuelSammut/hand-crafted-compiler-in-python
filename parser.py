@@ -17,7 +17,7 @@ class Parser:
             print(t.type, t.lexeme)
         self.crtToken = lex.Token("", lex.TokenType.VOID)
         self.nextToken = lex.Token("", lex.TokenType.VOID)
-        self.ASTroot = ast.ASTAssignmentNode  # this will need to change once you introduce the AST program node ....
+        self.ASTroot = None  # this will need to change once you introduce the AST program node ....
         # that should become the new root node
 
     def PeekNextToken(self, k=1):
@@ -365,21 +365,24 @@ class Parser:
         if self.crtToken.type == lex.TokenType.IF:
             self.NextToken()
             if self.crtToken.type == lex.TokenType.LEFT_ROUND_BRACKET:
+                self.NextToken()
                 expression = self.ParseExpression()
                 if expression is None:
                     raise Exception("Expression is null. ")
                 else:
                     if self.crtToken.type == lex.TokenType.RIGHT_ROUND_BRACKET:
+                        self.NextToken()
                         block1 = self.ParseBlock()
                         if block1 is None:
                             raise Exception("First block after if statement expression is null.")
                         else:
                             if self.crtToken.type == lex.TokenType.ELSE:
+                                self.NextToken()
                                 block2 = self.ParseBlock()
                                 if block2 is None:
                                     raise Exception("Second block after else statement is null. ")
                                 else:
-                                    ast.ASTIfStatementNode(expression, block1, block2)
+                                    return ast.ASTIfStatementNode(expression, block1, block2)
                             else:
                                 return ast.ASTIfStatementNode(expression, block1)
                     else:
@@ -388,44 +391,190 @@ class Parser:
                 raise Exception("Expected 'if' keyword to be followed by a left round bracket. ")
         else:
             raise Exception("Expected first token in if statement to be 'if'. ")
+
     def ParseStatement(self):
-        return self.ParseWriteStatement()
-        # if self.crtToken.type in [lex.TokenType.BOOLEAN_LITERAL, lex.TokenType.INTEGER_LITERAL,
-        #                           lex.TokenType.FLOAT_LITERAL, lex.TokenType.COLOUR_LITERAL,
-        #                           lex.TokenType.PAD_WIDTH, lex.TokenType.PAD_HEIGHT, lex.TokenType.PAD_READ]:
-        #     return self.ParseLiteral()
-        # elif self.crtToken.type == lex.TokenType.RANDOM_INT:
-        #     return self.ParsePadRandI()
-        # else:
-        #     return self.ParseAssignment()
+        statement = None
+        if self.crtToken.type == lex.TokenType.LET:
+            statement = self.ParseVariableDeclaration()
+            if self.crtToken.type != lex.TokenType.SEMI_COLON:
+                raise Exception("Expected semicolon after variable declaration statement.")
+            else:
+                self.NextToken()
+                return ast.ASTStatementNode(statement)
+        elif self.crtToken.type == lex.TokenType.IDENTIFIER:
+            statement = self.ParseAssignment()
+            if self.crtToken.type != lex.TokenType.SEMI_COLON:
+                raise Exception("Expected semicolon after assignment statement.")
+            else:
+                self.NextToken()
+                return ast.ASTStatementNode(statement)
+        elif self.crtToken.type == lex.TokenType.PRINT:
+            statement = self.ParsePrintStatement()
+            if self.crtToken.type != lex.TokenType.SEMI_COLON:
+                raise Exception("Expected semicolon after print statement.")
+            else:
+                self.NextToken()
+                return ast.ASTStatementNode(statement)
+        elif self.crtToken.type == lex.TokenType.DELAY:
+            statement = self.ParseDelayStatement()
+            if self.crtToken.type != lex.TokenType.SEMI_COLON:
+                raise Exception("Expected semicolon after delay statement.")
+            else:
+                self.NextToken()
+                return ast.ASTStatementNode(statement)
+        elif self.crtToken.type == lex.TokenType.WRITE or self.crtToken.type == lex.TokenType.WRITE_BOX:
+            statement = self.ParseWriteStatement()
+            if self.crtToken.type != lex.TokenType.SEMI_COLON:
+                raise Exception("Expected semicolon after write statement.")
+            else:
+                self.NextToken()
+                return ast.ASTStatementNode(statement)
+        elif self.crtToken.type == lex.TokenType.IF:
+            return ast.ASTStatementNode(self.ParseIfStatement())
+        elif self.crtToken.type == lex.TokenType.FOR:
+            return ast.ASTStatementNode(self.ParseForStatement())
+        elif self.crtToken.type == lex.TokenType.WHILE:
+            return ast.ASTStatementNode(self.ParseWhileStatement())
+        elif self.crtToken.type == lex.TokenType.RETURN:
+            return ast.ASTStatementNode(self.ParseReturnStatement())
+        elif self.crtToken.type == lex.TokenType.FOR:
+            statement = self.ParseReturnStatement()
+            if self.crtToken.type != lex.TokenType.SEMI_COLON:
+                raise Exception("Expected semicolon after write statement.")
+            else:
+                return ast.ASTStatementNode(statement)
+        elif self.crtToken.type == lex.TokenType.FUN:
+            return ast.ASTStatementNode(self.ParseFunctionDeclaration())
+        elif self.crtToken.type == lex.TokenType.LEFT_CURLY_BRACKET:
+            return ast.ASTStatementNode(self.ParseBlock())
+        else:
+            raise Exception("No valid statement")
+
+    def ParseForStatement(self):
+        if self.crtToken.type == lex.TokenType.FOR:
+            self.NextToken()
+            if self.crtToken.type == lex.TokenType.LEFT_ROUND_BRACKET:
+                self.NextToken()
+                if self.crtToken.type == lex.TokenType.LET:
+                    variableDeclaration = self.ParseVariableDeclaration()
+                    if variableDeclaration is None:
+                        raise Exception("Variable declaration in for statement is null.")
+                    if self.crtToken.type == lex.TokenType.SEMI_COLON:
+                        self.NextToken()
+                        expression = self.ParseExpression()
+                        if expression is None:
+                            raise Exception("Expression in for statement is null.")
+                        if self.crtToken.type == lex.TokenType.SEMI_COLON:
+                            self.NextToken()
+                            if self.crtToken.type == lex.TokenType.RIGHT_ROUND_BRACKET:
+                                self.NextToken()
+                                block = self.ParseBlock()
+                                if block is None:
+                                    raise Exception("Block statement in for statement is null.")
+                                return ast.ASTForStatementNode(expression, block, variableDeclaration, assign=None)
+                            elif self.crtToken.type == lex.TokenType.IDENTIFIER:
+                                assignment = self.ParseAssignment()
+                                if assignment is None:
+                                    raise Exception("Assignment in for statement is none.")
+                                else:
+                                    if self.crtToken.type == lex.TokenType.RIGHT_ROUND_BRACKET:
+                                        self.NextToken()
+                                        block = self.ParseBlock()
+                                        if block is None:
+                                            raise Exception("Block at end of for statement is null.")
+                                        else:
+                                            return ast.ASTForStatementNode(expression, block, variableDeclaration,
+                                                                           assignment)
+                                    else:
+                                        raise Exception("Expected closing round brackets at end of for statement.")
+
+                            else:
+                                raise Exception("Expected, either a closing round bracket or assignment declaration "
+                                                "at end of for statement.")
+                        else:
+                            raise Exception("Expected a semicolon after variable declaration in for statement.")
+
+                    else:
+                        raise Exception("Expected ")
+                elif self.crtToken.type == lex.TokenType.SEMI_COLON:
+                    self.NextToken()
+                    expression = self.ParseExpression()
+                    if self.crtToken.type == lex.TokenType.SEMI_COLON:
+                        self.NextToken()
+                        if self.crtToken.type == lex.TokenType.RIGHT_ROUND_BRACKET:
+                            self.NextToken()
+                            block = self.ParseBlock()
+                            if block is None:
+                                raise Exception("Block at end of for statement is null.")
+                            else:
+                                return ast.ASTForStatementNode(expression, block, variable_dec=None, assign=None)
+                        elif self.crtToken.type == lex.TokenType.IDENTIFIER:
+                            assignment = self.ParseAssignment()
+                            if self.crtToken.type == lex.TokenType.RIGHT_ROUND_BRACKET:
+                                self.NextToken()
+                                block = self.ParseBlock()
+                                if block is None:
+                                    raise Exception("Block at end of for statement is null.")
+                                else:
+                                    return ast.ASTForStatementNode(expression, block, variable_dec=None, assign=assignment)
+                            else:
+                                raise Exception("Expected closing round brackets after assignment in for statement.")
+                        else:
+                            raise Exception("Expected either a closing round bracket or assignment in for statement.")
+                    else:
+                        raise Exception("Expected semicolon following expression in for statement.")
+                else:
+                    raise Exception(
+                        "Expected a variable declaration or a semicolon after opening of brackets in for statement.")
+            else:
+                raise Exception("Expected left round bracket to follow 'for' keyword'.")
+        else:
+            raise Exception("Expected for statement to start with 'for' keyword.")
 
     def ParseBlock(self):
         # At the moment we only have assignment statements .... you'll need to add more for the assignment -
         # branching depends on the token type
+        if self.crtToken.type == lex.TokenType.LEFT_CURLY_BRACKET:
+            self.NextToken()
+            block = ast.ASTBlockNode()
 
-        block = ast.ASTBlockNode()
+            while self.crtToken.type != lex.TokenType.END:
+                print("New Statement - Processing Initial Token:: ", self.crtToken.type, self.crtToken.lexeme)
+                s = self.ParseStatement()
+                block.add_statement(s)
+                if self.crtToken.type == lex.TokenType.RIGHT_CURLY_BRACKET:
+                    self.NextToken()
+                    return block
+
+
+            else:
+                raise Exception("Expected block to be followed by a right curly bracket.")
+
+        else:
+            raise Exception("Expected block to start with left curly brackets.")
+
+    def ParseProgram(self):
+        self.NextToken()  # set crtToken to the first token (skip all WS)
+        # At the moment we only have assignment statements .... you'll need to add more for the assignment -
+        # branching depends on the token type
+
+        program = ast.ASTProgramNode()
 
         while self.crtToken.type != lex.TokenType.END:
             print("New Statement - Processing Initial Token:: ", self.crtToken.type, self.crtToken.lexeme)
             s = self.ParseStatement()
-            block.add_statement(s)
-            if self.crtToken.type == lex.TokenType.SEMI_COLON:
-                self.NextToken()
-            else:
-                raise Exception("No semicolon separating statements in Block")
+            program.add_statement(s)
 
-        return block
-
-    def ParseProgram(self):
-        self.NextToken()  # set crtToken to the first token (skip all WS)
-        b = self.ParseBlock()
-        return b
+        return program
 
     def Parse(self):
         self.ASTroot = self.ParseProgram()
 
 
-parser = Parser(" __write 5*5, 2*2;")
+parser = Parser(" for ( ; xyz + 1.3;  xyz = 38)"
+                "{"
+                "    var = 5;"
+                "}")
 parser.Parse()
 
 print_visitor = ast.PrintNodesVisitor()
