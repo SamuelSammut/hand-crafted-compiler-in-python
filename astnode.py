@@ -73,6 +73,44 @@ class ASTSimpleExpressionNode(ASTExpressionNode):
         visitor.visit_simple_expression_node(self)
 
 
+class ASTPrintStatementNode(ASTExpressionNode):
+    def __init__(self, expression):
+        self.name = "ASTPrintStatementNode"
+        self.expr = expression
+
+    def accept(self, visitor):
+        visitor.visit_print_statement_node(self)
+
+
+class ASTDelayStatementNode(ASTExpressionNode):
+    def __init__(self, expression):
+        self.name = "ASTDelayStatementNode"
+        self.expr = expression
+
+    def accept(self, visitor):
+        visitor.visit_delay_statement_node(self)
+
+
+class ASTReturnStatementNode(ASTExpressionNode):
+    def __init__(self, expression):
+        self.name = "ASTReturnStatementNode"
+        self.expr = expression
+
+    def accept(self, visitor):
+        visitor.visit_return_statement_node(self)
+
+
+class ASTWriteStatementBoxNode(ASTExpressionNode):
+    def __init__(self, expressions=None):
+        if expressions is None:
+            expressions = []
+        self.name = "ASTWriteStatementBoxNode"
+        self.expressions = expressions
+
+    def accept(self, visitor):
+        visitor.visit_write_statement_node(self)
+
+
 class ASTFunctionCallNode(ASTExpressionNode):
     def __init__(self, identifier, actual_params=None):
         if actual_params is None:
@@ -113,6 +151,16 @@ class ASTAssignmentNode(ASTStatementNode):
         visitor.visit_assignment_node(self)
 
 
+class ASTVariableDeclarationSuffixNode(ASTStatementNode):
+    def __init__(self, ast_type_node, ast_expression_node):
+        self.name = "ASTVariableDeclarationSuffixNode"
+        self.type = ast_type_node
+        self.expr = ast_expression_node
+
+    def accept(self, visitor):
+        visitor.visit_variable_declaration_suffix_node(self)
+
+
 class ASTLiteralNode(ASTAssignmentNode):
     def __init__(self, literal):
         self.name = "ASTLiteralNode"
@@ -138,6 +186,16 @@ class ASTIntegerLiteralNode(ASTLiteralNode):
 
     def accept(self, visitor):
         visitor.visit_integer_literal_node(self)
+
+
+class ASTVariableDeclarationNode(ASTVariableDeclarationSuffixNode):
+    def __init__(self, ast_identifier_node, ast_expression_node):
+        self.name = "ASTVariableDeclarationNode"
+        self.identifier = ast_identifier_node
+        self.expr = ast_expression_node
+
+    def accept(self, visitor):
+        visitor.visit_variable_declaration_node(self)
 
 
 class ASTFloatLiteralNode(ASTLiteralNode):
@@ -277,6 +335,23 @@ class ASTVisitor:
     def visit_expression_node(self, node):
         raise NotImplementedError
 
+    def visit_variable_declaration_suffix_node(self, node):
+        raise NotImplementedError
+
+    def visit_variable_declaration_node(self, node):
+        raise NotImplementedError
+
+    def visit_print_statement_node(self, node):
+        raise NotImplementedError
+
+    def visit_delay_statement_node(self, node):
+        raise NotImplementedError
+
+    def visit_return_statement_node(self, node):
+        return NotImplementedError
+
+    def visit_write_statement_node(self, node):
+        raise NotImplementedError
 
 class PrintNodesVisitor(ASTVisitor):
     def __init__(self):
@@ -360,11 +435,7 @@ class PrintNodesVisitor(ASTVisitor):
 
     def visit_type_node(self, type_node):
         self.node_count += 1
-        print('\t' * self.tab_count, "Type node => ")
-        self.inc_tab_count()
-        type_node.value.accept(self)
-        self.dec_tab_count()
-
+        print('\t' * self.tab_count, "Type => ", type_node.value)
 
     def visit_actual_params_node(self, actual_params_node):
         self.node_count += 1
@@ -374,7 +445,6 @@ class PrintNodesVisitor(ASTVisitor):
             param.accept(self)
         self.dec_tab_count()
 
-
     def visit_function_call_node(self, function_call_node):
         self.node_count += 1
         print('\t' * self.tab_count, "Function call node => ")
@@ -383,6 +453,15 @@ class PrintNodesVisitor(ASTVisitor):
         if function_call_node.actual_params:
             for param in function_call_node.actual_params.actual_params:
                 param.accept(self)
+        self.dec_tab_count()
+
+    def visit_write_statement_node(self, write_statement_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Write statement call node => ")
+        self.inc_tab_count()
+        if write_statement_node.expressions:
+            for write_statement in write_statement_node.expressions:
+                write_statement.accept(self)
         self.dec_tab_count()
 
     def visit_sub_expression_node(self, sub_expression_node):
@@ -430,6 +509,43 @@ class PrintNodesVisitor(ASTVisitor):
             simple_expr.accept(self)
         if expression_node.Type is not None:
             expression_node.Type.accept(self)
+        self.dec_tab_count()
+
+    def visit_variable_declaration_suffix_node(self, variable_declaration_suffix_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Variable declaration suffix node => ")
+        self.inc_tab_count()
+        variable_declaration_suffix_node.type.accept(self)
+        variable_declaration_suffix_node.expr.accept(self)
+        self.dec_tab_count()
+
+    def visit_variable_declaration_node(self, variable_declaration_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Variable declaration node => ")
+        self.inc_tab_count()
+        variable_declaration_node.identifier.accept(self)
+        variable_declaration_node.expr.accept(self)
+        self.dec_tab_count()
+
+    def visit_print_statement_node(self, print_statement_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Print statement node => ")
+        self.inc_tab_count()
+        print_statement_node.expr.accept(self)
+        self.dec_tab_count()
+
+    def visit_delay_statement_node(self, delay_statement_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Delay statement node => ")
+        self.inc_tab_count()
+        delay_statement_node.expr.accept(self)
+        self.dec_tab_count()
+
+    def visit_return_statement_node(self, return_statement_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Return statement node => ")
+        self.inc_tab_count()
+        return_statement_node.expr.accept(self)
         self.dec_tab_count()
 #
 # # Create a print visitor instance

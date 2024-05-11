@@ -115,26 +115,24 @@ class Parser:
         if simpleExpression1 is None:
             raise Exception("Expected a simple expression to start parsing an expression")
         simpleExpressions.append(simpleExpression1)
-        while self.crtToken == lex.TokenType.RELATIONAL_OPERAND:
+        while self.crtToken.type == lex.TokenType.RELATIONAL_OPERAND:
             self.NextToken()
             simpleExpressionN = self.ParseSimpleExpression()
             if simpleExpressionN is None:
                 raise Exception("No simple expression following relational operand in expression parsing.")
             simpleExpressions.append(simpleExpressionN)
-        self.NextToken()
-        if self.crtToken.type == lex.TokenType.AS and self.nextToken.type == lex.TokenType.TYPE:
+            # self.NextToken()
+        if self.crtToken.type == lex.TokenType.AS:
             self.NextToken()
-            Type = ast.ASTTypeNode(self.crtToken.lexeme)
-            if Type is None:
-                raise Exception("Expected 'AS' keyword and Type after simple expression.")
-            else:
-                return ast.ASTExpressionNode(simpleExpressions, Type)
+            if self.crtToken.type == lex.TokenType.TYPE:
+                Type = ast.ASTTypeNode(self.crtToken.lexeme)
+                self.NextToken()
+                if Type is None:
+                    raise Exception("Expected 'AS' keyword and Type after simple expression.")
+                else:
+                    return ast.ASTExpressionNode(simpleExpressions, Type)
         else:
             return ast.ASTExpressionNode(simpleExpressions)
-
-
-
-
 
     def ParsePadRead(self):
         if self.crtToken.type == lex.TokenType.PAD_READ:
@@ -206,24 +204,22 @@ class Parser:
                 self.NextToken()  # Consume the current token
                 print("Variable Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
         return ast.ASTFactorNode(factor)
+
     def ParseAssignment(self):
-        # Assignment is made up of two main parts; the LHS (the variable) and RHS (the expression)
         if self.crtToken.type == lex.TokenType.IDENTIFIER:
-            # create AST node to store the identifier
             assignment_lhs = ast.ASTIdentifierNode(self.crtToken.lexeme)
             self.NextToken()
-            print("Variable Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
-
-        if self.crtToken.type == lex.TokenType.EQUALS:
-            # no need to do anything ... token can be discarded
-            self.NextToken()
-            print("EQ Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
-
-        # Next sequence of tokens should make up an expression ... therefor call ParseExpression that will return the
-        # subtree representing that expression
-        assignment_rhs = self.ParseExpression()
-
-        return ast.ASTAssignmentNode(assignment_lhs, assignment_rhs)
+            if self.crtToken.type == lex.TokenType.EQUALS:
+                self.NextToken()
+                assignment_rhs = self.ParseExpression()
+                if assignment_rhs is None:
+                    raise Exception("Expression on right hand side of assignment is null")
+                else:
+                    return ast.ASTAssignmentNode(assignment_lhs, assignment_rhs)
+            else:
+                raise Exception("Expected equal sign to follow identifier when parsing assignment.")
+        else:
+            raise Exception("Expected assignment to start with identifier")
 
     def ParseTerm(self):
         factors = []
@@ -253,8 +249,147 @@ class Parser:
             terms.append(termsN)
         return ast.ASTSimpleExpressionNode(terms)
 
+    def ParseVariableDeclarationSuffix(self):
+        if self.crtToken.type == lex.TokenType.COLON:
+            self.NextToken()
+            if self.crtToken.type == lex.TokenType.TYPE:
+                Type = ast.ASTTypeNode(self.crtToken.lexeme)
+                self.NextToken()
+                if Type is None:
+                    raise Exception("Expected type to not be null after colon in variable declaration suffix.")
+                if self.crtToken.type == lex.TokenType.EQUALS:
+                    self.NextToken()
+                    expression = self.ParseExpression()
+                    if expression is None:
+                        raise Exception("Expected expression to not be null in Variable Declaration suffix.")
+                    else:
+                        return ast.ASTVariableDeclarationSuffixNode(Type, expression)
+                else:
+                    raise Exception("Expected equal sign after type in variable declaration suffix.")
+
+            else:
+                raise Exception("Expected type to follow colon in variable declaration suffix.")
+        else:
+            raise Exception("Expected Variable Declaration Suffix to start with colon symbol.")
+
+    def ParsePrintStatement(self):
+        if self.crtToken.type == lex.TokenType.PRINT:
+            self.NextToken()
+            expression = self.ParseExpression()
+            if expression is None:
+                raise Exception("Expected expression after print statement")
+            else:
+                return ast.ASTPrintStatementNode(expression)
+
+        else:
+            raise Exception("Expected print statement to start with __print keyword")
+
+    def ParseDelayStatement(self):
+        if self.crtToken.type == lex.TokenType.DELAY:
+            self.NextToken()
+            expression = self.ParseExpression()
+            if expression is None:
+                raise Exception("Expected expression after delay statement")
+            else:
+                return ast.ASTDelayStatementNode(expression)
+
+        else:
+            raise Exception("Expected delay statement to start with __delay keyword")
+
+    def ParseWriteStatement(self):
+        expressionList = []
+        if self.crtToken.type == lex.TokenType.WRITE_BOX:
+            self.NextToken()
+            for i in range(5):
+                expression = self.ParseExpression()
+                expressionList.append(expression)
+                if i < 4:
+                    if self.crtToken.type == lex.TokenType.COMMA:
+                        self.NextToken()
+                    else:
+                        raise Exception("Expected a comma between expressions when parsing write statements.")
+                else:
+                    return ast.ASTWriteStatementBoxNode(expressionList)
+
+        elif self.crtToken.type == lex.TokenType.WRITE:
+            self.NextToken()
+            for i in range(3):
+                expression = self.ParseExpression()
+                expressionList.append(expression)
+                if i < 2:
+                    if self.crtToken.type == lex.TokenType.COMMA:
+                        self.NextToken()
+                    else:
+                        raise Exception("Expected a comma between expressions when parsing write statements.")
+                else:
+                    return ast.ASTWriteStatementBoxNode(expressionList)
+
+        else:
+            raise Exception("Expected Write statement to start with __write or __write_box")
+
+    def ParseReturnStatement(self):
+        if self.crtToken.type == lex.TokenType.RETURN:
+            self.NextToken()
+            expression = self.ParseExpression()
+            if expression is None:
+                raise Exception("Expected expression after return statement")
+            else:
+                return ast.ASTReturnStatementNode(expression)
+
+        else:
+            raise Exception("Expected return statement to start with return keyword")
+
+    def ParseVariableDeclaration(self):
+        if self.crtToken.type == lex.TokenType.LET:
+            self.NextToken()
+            if self.crtToken.type == lex.TokenType.IDENTIFIER:
+                identifier = ast.ASTIdentifierNode(self.crtToken.lexeme)
+                self.NextToken()
+                if identifier is None:
+                    raise Exception("Expected identifier to follow 'let' keyword when parsing variable declaration.")
+                else:
+                    variableDeclarationSuffix = self.ParseVariableDeclarationSuffix()
+                    if variableDeclarationSuffix is None:
+                        raise Exception(
+                            "Expected identifier to be followed by variable declaration suffix, but it is None")
+                    else:
+                        return ast.ASTVariableDeclarationNode(identifier, variableDeclarationSuffix)
+
+            else:
+                raise Exception("Expected identifier to follow 'let' keyword when parsing variable declaration.")
+
+        else:
+            raise Exception("Expected variable declaration to start with keyword: 'let'")
+
+    def ParseIfStatement(self):
+        if self.crtToken.type == lex.TokenType.IF:
+            self.NextToken()
+            if self.crtToken.type == lex.TokenType.LEFT_ROUND_BRACKET:
+                expression = self.ParseExpression()
+                if expression is None:
+                    raise Exception("Expression is null. ")
+                else:
+                    if self.crtToken.type == lex.TokenType.RIGHT_ROUND_BRACKET:
+                        block1 = self.ParseBlock()
+                        if block1 is None:
+                            raise Exception("First block after if statement expression is null.")
+                        else:
+                            if self.crtToken.type == lex.TokenType.ELSE:
+                                block2 = self.ParseBlock()
+                                if block2 is None:
+                                    raise Exception("Second block after else statement is null. ")
+                                else:
+                                    ast.ASTIfStatementNode(expression, block1, block2)
+                            else:
+                                return ast.ASTIfStatementNode(expression, block1)
+                    else:
+                        raise Exception("Expected right round bracket after expression in if statement. ")
+            else:
+                raise Exception("Expected 'if' keyword to be followed by a left round bracket. ")
+        else:
+            raise Exception("Expected first token in if statement to be 'if'. ")
     def ParseStatement(self):
-        return self.ParseExpression()
+        return self.ParseWriteStatement()
         # if self.crtToken.type in [lex.TokenType.BOOLEAN_LITERAL, lex.TokenType.INTEGER_LITERAL,
         #                           lex.TokenType.FLOAT_LITERAL, lex.TokenType.COLOUR_LITERAL,
         #                           lex.TokenType.PAD_WIDTH, lex.TokenType.PAD_HEIGHT, lex.TokenType.PAD_READ]:
@@ -277,8 +412,7 @@ class Parser:
             if self.crtToken.type == lex.TokenType.SEMI_COLON:
                 self.NextToken()
             else:
-                print("Syntax Error - No Semicolon separating statements in block")
-                break
+                raise Exception("No semicolon separating statements in Block")
 
         return block
 
@@ -291,7 +425,7 @@ class Parser:
         self.ASTroot = self.ParseProgram()
 
 
-parser = Parser(" xyz * 32.3 - __width / 2 == 2 as bool ;")
+parser = Parser(" __write 5*5, 2*2;")
 parser.Parse()
 
 print_visitor = ast.PrintNodesVisitor()

@@ -669,7 +669,7 @@ class Lexer:
         self.Tx[0][self.lexeme_list.index("}")] = 156
 
         # Catch needed letters in starting state
-        catch_letters = ["d", "e", "g", "h", "m", "o", "p", "r", "s", "u", "x", "y"]
+        catch_letters = ["d", "e", "g", "h", "m", "o", "p", "s", "u", "x", "y"]
         for letter in catch_letters:
             self.Tx[0][self.lexeme_list.index(letter + "_letter")] = 53
 
