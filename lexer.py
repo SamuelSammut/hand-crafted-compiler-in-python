@@ -801,10 +801,10 @@ class Lexer:
         return tokens_list
 
 
-lex = Lexer()
-toks = lex.GenerateTokens(" else1")
-
-for t in toks:
-    print(t.type, t.lexeme)
+# lex = Lexer()
+# toks = lex.GenerateTokens(" else1")
+#
+# for t in toks:
+#     print(t.type, t.lexeme)
 
 

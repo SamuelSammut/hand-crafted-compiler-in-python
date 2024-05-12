@@ -53,6 +53,18 @@ class ASTFactorNode(ASTExpressionNode):
         visitor.visit_factor_node(self)
 
 
+class ASTFunctionDeclarationNode(ASTStatementNode):
+    def __init__(self, identifier, Type, block, formalParams=None):
+        self.name = "ASTFunctionDeclarationNode"
+        self.identifier = identifier
+        self.formalParams = formalParams
+        self.Type = Type
+        self.block = block
+
+    def accept(self, visitor):
+        visitor.visit_function_declaration_node(self)
+
+
 class ASTUnaryNode(ASTExpressionNode):
     def __init__(self, expr):
         self.name = "ASTUnaryNode"
@@ -155,16 +167,28 @@ class ASTPadRandINode(ASTStatementNode):
 
     def accept(self, visitor):
         visitor.visit_padrandi_node(self)
+
+
 class ASTForStatementNode(ASTStatementNode):
     def __init__(self, expr, block, variable_dec=None, assign=None):
         self.name = "ASTForStatementNode"
         self.variable_dec = variable_dec
-        if assign is not None:
-            self.assign = assign
         self.expr = expr
+        self.assign = assign
         self.block = block
+
     def accept(self, visitor):
         visitor.visit_for_statement_node(self)
+
+
+class ASTWhileStatementNode(ASTStatementNode):
+    def __init__(self, expr, block):
+        self.name = "ASTWhileStatementNode"
+        self.expr = expr
+        self.block = block
+
+    def accept(self, visitor):
+        visitor.visit_while_statement_node(self)
 
 
 class ASTAssignmentNode(ASTStatementNode):
@@ -226,11 +250,11 @@ class ASTVariableDeclarationNode(ASTVariableDeclarationSuffixNode):
 
 class ASTIfStatementNode(ASTStatementNode):
     def __init__(self, ast_expression_node, ast_block1_node, ast_block2_node=None):
-        if ast_block2_node is not None:
-            self.block2 = ast_block2_node
+        self.block2 = ast_block2_node
         self.name = "ASTIfStatementNode"
         self.expression = ast_expression_node
         self.block1 = ast_block1_node
+
     def accept(self, visitor):
         visitor.visit_if_statement_node(self)
 
@@ -278,6 +302,25 @@ class ASTPadHeightLiteralNode(ASTLiteralNode):
 
     def accept(self, visitor):
         visitor.visit_pad_height_literal_node(self)
+
+
+class ASTFormalParameterNode(ASTStatementNode):
+    def __init__(self, identifier, type):
+        self.name = "ASTFormalParameterNode"
+        self.identifier = identifier
+        self.type = type
+
+    def accept(self, visitor):
+        visitor.visit_formal_parameter_node(self)
+
+
+class ASTFormalParametersNode(ASTStatementNode):
+    def __init__(self, formal_params):
+        self.name = "ASTFormalParametersNode"
+        self.formal_params = formal_params
+
+    def accept(self, visitor):
+        visitor.visit_formal_params(self)
 
 
 class ASTPadReadNode(ASTLiteralNode):
@@ -332,7 +375,11 @@ class ASTVisitor:
 
     def visit_padrandi_node(self, node):
         raise NotImplementedError()
+
     def visit_for_statement_node(self, node):
+        raise NotImplementedError
+
+    def visit_while_statement_node(self, node):
         raise NotImplementedError
 
     def visit_type_node(self, node):
@@ -397,7 +444,17 @@ class ASTVisitor:
 
     def visit_write_statement_node(self, node):
         raise NotImplementedError
+
     def visit_statement_node(self, node):
+        raise NotImplementedError
+
+    def visit_formal_parameter_node(self, node):
+        raise NotImplementedError
+
+    def visit_formal_params(self, node):
+        raise NotImplementedError
+
+    def visit_function_declaration_node(self, node):
         raise NotImplementedError
 
 
@@ -468,6 +525,7 @@ class PrintNodesVisitor(ASTVisitor):
             st.accept(self)
 
         self.dec_tab_count()
+
     def visit_padread_node(self, padread_node):
         self.node_count += 1
         print('\t' * self.tab_count, "PadRead node => ")
@@ -628,12 +686,46 @@ class PrintNodesVisitor(ASTVisitor):
         self.inc_tab_count()
         if for_statement_node.variable_dec is not None:
             for_statement_node.variable_dec.accept(self)
+        for_statement_node.expr.accept(self)
         if for_statement_node.assign is not None:
             for_statement_node.assign.accept(self)
-        for_statement_node.expr.accept(self)
         for_statement_node.block.accept(self)
         self.dec_tab_count()
 
+    def visit_while_statement_node(self, while_statement_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "While statement node => ")
+        self.inc_tab_count()
+        while_statement_node.expr.accept(self)
+        while_statement_node.block.accept(self)
+        self.dec_tab_count()
+
+    def visit_formal_parameter_node(self, formal_parameter_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Formal parameter node => ")
+        self.inc_tab_count()
+        formal_parameter_node.identifier.accept(self)
+        formal_parameter_node.type.accept(self)
+        self.dec_tab_count()
+
+    def visit_formal_params(self, formal_params_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Formal Params node => ")
+        self.inc_tab_count()
+        for param in formal_params_node.formal_params:
+            param.accept(self)
+        self.dec_tab_count()
+
+    def visit_function_declaration_node(self, function_declaration_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Function declaration node => ")
+        self.inc_tab_count()
+        function_declaration_node.identifier.accept(self)
+        if function_declaration_node.formalParams is not None:
+            function_declaration_node.formalParams.accept(self)
+        function_declaration_node.Type.accept(self)
+        function_declaration_node.block.accept(self)
+        self.dec_tab_count()
 #
 # # Create a print visitor instance
 # print_visitor = PrintNodesVisitor()

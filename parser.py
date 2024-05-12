@@ -437,12 +437,6 @@ class Parser:
             return ast.ASTStatementNode(self.ParseWhileStatement())
         elif self.crtToken.type == lex.TokenType.RETURN:
             return ast.ASTStatementNode(self.ParseReturnStatement())
-        elif self.crtToken.type == lex.TokenType.FOR:
-            statement = self.ParseReturnStatement()
-            if self.crtToken.type != lex.TokenType.SEMI_COLON:
-                raise Exception("Expected semicolon after write statement.")
-            else:
-                return ast.ASTStatementNode(statement)
         elif self.crtToken.type == lex.TokenType.FUN:
             return ast.ASTStatementNode(self.ParseFunctionDeclaration())
         elif self.crtToken.type == lex.TokenType.LEFT_CURLY_BRACKET:
@@ -450,6 +444,141 @@ class Parser:
         else:
             raise Exception("No valid statement")
 
+    def ParseWhileStatement(self):
+        if self.crtToken.type == lex.TokenType.WHILE:
+            self.NextToken()
+            if self.crtToken.type == lex.TokenType.LEFT_ROUND_BRACKET:
+                self.NextToken()
+                expression = self.ParseExpression()
+                if expression is None:
+                    raise Exception("Expression in while statement is null.")
+                else:
+                    if self.crtToken.type == lex.TokenType.RIGHT_ROUND_BRACKET:
+                        self.NextToken()
+                        block = self.ParseBlock()
+                        if block is None:
+                            raise Exception("Block in while statement is null.")
+                        else:
+                            return ast.ASTWhileStatementNode(expression, block)
+                    else:
+                        raise Exception(
+                            "Expected expression in while statement to be followed by closing round brackets.")
+            else:
+                raise Exception("Expected while keyword to be followed by open round brackets.")
+        else:
+            raise Exception("Expected while statement to start with while keyword.")
+    def ParseFormalParameter(self):
+        if self.crtToken.type == lex.TokenType.IDENTIFIER:
+            identifier = ast.ASTIdentifierNode(self.crtToken.lexeme)
+            self.NextToken()
+            if identifier is None:
+                raise Exception("Identifier at start of formal parameter is null.")
+            else:
+                if self.crtToken.type == lex.TokenType.COLON:
+                    self.NextToken()
+                    if self.crtToken.type == lex.TokenType.TYPE:
+                        type = ast.ASTTypeNode(self.crtToken.lexeme)
+                        self.NextToken()
+                        if type is None:
+                            raise Exception("Type in formal parameter is null.")
+                        else:
+                            return ast.ASTFormalParameterNode(identifier, type)
+                    else:
+                        raise Exception("Expected token after colon to be a type in Formal parameter parse.")
+                else:
+                    raise Exception("Expected colon too follow identifier in Formal Parameter parse.")
+        else:
+            raise Exception("Expected identifier at start of formal parameter")
+
+    def ParseFormalParameters(self):
+        formalParameters = []
+        if self.crtToken.type == lex.TokenType.IDENTIFIER:
+            # self.NextToken()
+            formalParameter1 = self.ParseFormalParameter()
+            if formalParameter1 is None:
+                raise Exception("First formal parameter is null.")
+            else:
+                formalParameters.append(formalParameter1)
+                while self.crtToken.type == lex.TokenType.COMMA:
+                    self.NextToken()
+                    formalParameterN = self.ParseFormalParameter()
+                    if formalParameterN is None:
+                        raise Exception("A formal parameter is null.")
+                    else:
+                        formalParameters.append(formalParameterN)
+                if formalParameters is None:
+                    raise Exception("Error occurred while parsing formal parameters list.")
+                else:
+                    return ast.ASTFormalParametersNode(formalParameters)
+
+        else:
+            raise Exception("Expected formal parameters to start with identifier.")
+
+    def ParseFunctionDeclaration(self):
+        if self.crtToken.type == lex.TokenType.FUN:
+            self.NextToken()
+            if self.crtToken.type == lex.TokenType.IDENTIFIER:
+                identifier = ast.ASTIdentifierNode(self.crtToken.lexeme)
+                self.NextToken()
+                if identifier is None:
+                    raise Exception("Identifier in function declaration is null.")
+                else:
+                    if self.crtToken.type == lex.TokenType.LEFT_ROUND_BRACKET:
+                        self.NextToken()
+                        if self.crtToken.type == lex.TokenType.IDENTIFIER:
+                            # self.NextToken()
+                            formalParams = self.ParseFormalParameters()
+                            if formalParams is None:
+                                raise Exception("Formal parameters in function declaration is null.")
+                            else:
+                                if self.crtToken.type == lex.TokenType.RIGHT_ROUND_BRACKET:
+                                    self.NextToken()
+                                    if self.crtToken.type == lex.TokenType.ARROW:
+                                        self.NextToken()
+                                        if self.crtToken.type == lex.TokenType.TYPE:
+                                            Type = ast.ASTTypeNode(self.crtToken.lexeme)
+                                            self.NextToken()
+                                            if Type is None:
+                                                raise Exception("Type in function declaration is null.")
+                                            else:
+                                                block = self.ParseBlock()
+                                                if block is None:
+                                                    raise Exception("Block in function declaration is null.")
+                                                else:
+                                                    return ast.ASTFunctionDeclarationNode(identifier=identifier, formalParams=formalParams, Type=Type, block=block)
+                                        else:
+                                            raise Exception("Expected type after arrow in function declaration. ")
+                                    else:
+                                        raise Exception("Expected arrow '->' after round brackets in function declaration. ")
+                                else:
+                                    raise Exception("Expected closing round bracket after formal parameters in function declaration.")
+                        elif self.crtToken.type == lex.TokenType.RIGHT_ROUND_BRACKET:
+                            self.NextToken()
+                            if self.crtToken.type == lex.TokenType.ARROW:
+                                self.NextToken()
+                                if self.crtToken.type == lex.TokenType.TYPE:
+                                    Type = ast.ASTTypeNode
+                                    self.NextToken()
+                                    if Type is None:
+                                        raise Exception("Type in function declaration is null.")
+                                    else:
+                                        block = self.ParseBlock()
+                                        if block is None:
+                                            raise Exception("Block in function declaration is null.")
+                                        else:
+                                            return ast.ASTFunctionDeclarationNode(identifier=identifier, Type=Type, block=block)
+                                else:
+                                    raise Exception("Expected type after arrow in function declaration. ")
+                            else:
+                                raise Exception("Expected arrow '->' after round brackets in function declaration. ")
+                        else:
+                            raise Exception("Expected either formal parameters or empty brackets after identifier in function declaration. ")
+                    else:
+                        raise Exception("Expected identifier to be followed by an opening round bracket in function declaration.")
+            else:
+                raise Exception("Expected fun keyword to be followed by an identfier.")
+        else:
+            raise Exception("Expected function declaration to start with 'fun' keyword.")
     def ParseForStatement(self):
         if self.crtToken.type == lex.TokenType.FOR:
             self.NextToken()
@@ -471,7 +600,7 @@ class Parser:
                                 block = self.ParseBlock()
                                 if block is None:
                                     raise Exception("Block statement in for statement is null.")
-                                return ast.ASTForStatementNode(expression, block, variableDeclaration, assign=None)
+                                return ast.ASTForStatementNode(variableDeclaration, expression, block, assign=None)
                             elif self.crtToken.type == lex.TokenType.IDENTIFIER:
                                 assignment = self.ParseAssignment()
                                 if assignment is None:
@@ -483,8 +612,8 @@ class Parser:
                                         if block is None:
                                             raise Exception("Block at end of for statement is null.")
                                         else:
-                                            return ast.ASTForStatementNode(expression, block, variableDeclaration,
-                                                                           assignment)
+                                            return ast.ASTForStatementNode(variableDeclaration, expression, assignment,
+                                                                           block)
                                     else:
                                         raise Exception("Expected closing round brackets at end of for statement.")
 
@@ -516,7 +645,8 @@ class Parser:
                                 if block is None:
                                     raise Exception("Block at end of for statement is null.")
                                 else:
-                                    return ast.ASTForStatementNode(expression, block, variable_dec=None, assign=assignment)
+                                    return ast.ASTForStatementNode(expression, block, variable_dec=None,
+                                                                   assign=assignment)
                             else:
                                 raise Exception("Expected closing round brackets after assignment in for statement.")
                         else:
@@ -571,11 +701,7 @@ class Parser:
         self.ASTroot = self.ParseProgram()
 
 
-parser = Parser(" for ( ; xyz + 1.3;  xyz = 38)"
-                "{"
-                "    var = 5;"
-                "}")
+parser = Parser("   x2_2 =  5 + 2 >= 5 or 3 as float;");
 parser.Parse()
-
 print_visitor = ast.PrintNodesVisitor()
 parser.ASTroot.accept(print_visitor)
