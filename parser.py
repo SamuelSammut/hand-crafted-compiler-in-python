@@ -228,11 +228,16 @@ class Parser:
         if factor1 is None:
             raise Exception("Initial factor empty when parsing terms.")
         while self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
-            self.NextToken()
-            factorN = self.ParseFactor()
-            if factorN is None:
-                raise Exception("No factor following multiplicative operand in term parsing.")
-            factors.append(factorN)
+            multiplicative_op = ast.ASTMultiplicativeOperatorNode(self.crtToken.lexeme)
+            if multiplicative_op is None:
+                raise Exception("Multiplicative operand in term is null.")
+            else:
+                self.NextToken()
+                factorN = self.ParseFactor()
+                if factorN is None:
+                    raise Exception("No factor following multiplicative operand in term parsing.")
+                factors.append(multiplicative_op)
+                factors.append(factorN)
         return ast.ASTTermNode(factors)
 
     def ParseSimpleExpression(self):
@@ -701,7 +706,7 @@ class Parser:
         self.ASTroot = self.ParseProgram()
 
 
-parser = Parser("   x2_2 =  5 + 2 >= 5 or 3 as float;");
+parser = Parser("let x : int = y * 1;")
 parser.Parse()
 print_visitor = ast.PrintNodesVisitor()
 parser.ASTroot.accept(print_visitor)

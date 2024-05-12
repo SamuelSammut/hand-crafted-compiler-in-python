@@ -220,6 +220,15 @@ class ASTLiteralNode(ASTAssignmentNode):
         visitor.visit_literal_node(self)
 
 
+class ASTMultiplicativeOperatorNode(ASTNode):
+    def __init__(self, multiplicative_op):
+        self.name = "ASTMultiplicativeOperatorNode"
+        self.multiplicative_op = multiplicative_op
+
+    def accept(self, visitor):
+        visitor.visit_multiplicative_op(self)
+
+
 class ASTBooleanLiteralNode(ASTLiteralNode):
     def __init__(self, value):
         self.name = "ASTBooleanLiteralNode"
@@ -457,6 +466,9 @@ class ASTVisitor:
     def visit_function_declaration_node(self, node):
         raise NotImplementedError
 
+    def visit_multiplicative_op(self, node):
+        raise NotImplementedError
+
 
 class PrintNodesVisitor(ASTVisitor):
     def __init__(self):
@@ -473,6 +485,10 @@ class PrintNodesVisitor(ASTVisitor):
     def visit_boolean_literal_node(self, boolean_literal_node):
         self.node_count += 1
         print('\t' * self.tab_count, "Boolean literal:", boolean_literal_node.value)
+
+    def visit_multiplicative_op(self, multiplicative_op_node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Multiplicative operator::", multiplicative_op_node.multiplicative_op)
 
     def visit_integer_literal_node(self, int_node):
         self.node_count += 1
