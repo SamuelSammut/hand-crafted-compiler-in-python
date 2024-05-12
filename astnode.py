@@ -26,11 +26,11 @@ class ASTProgramNode(ASTNode):
 
 
 class ASTExpressionNode(ASTNode):
-    def __init__(self, simple_expr1, relational_op, simple_expr2, Type=None):
+    def __init__(self, simple_expr1, relational_op = None, next_simple_expr=None, Type=None):
         self.name = "ASTExpressionNode"
         self.simple_expr1 = simple_expr1
         self.relational_op = relational_op
-        self.simple_expr2 = simple_expr2
+        self.next_simple_expr = next_simple_expr
         self.Type = Type
     def accept(self, visitor):
         visitor.visit_expression_node(self)
@@ -634,14 +634,16 @@ class PrintNodesVisitor(ASTVisitor):
 #
     def visit_expression_node(self, expression_node):
         self.node_count += 1
-        print('\t' * self.tab_count, "Relational operator::", expression_node.relational_op)
-        self.inc_tab_count()
+        if expression_node.relational_op is not None:
+            print('\t' * self.tab_count, "Relational operator::", expression_node.relational_op)
+            self.inc_tab_count()
         expression_node.simple_expr1.accept(self)
-        # may need to accept multop later
-        expression_node.simple_expr2.accept(self)
-        self.dec_tab_count()
-        if expression_node.expression_type is not None:
-            print('\t' * self.tab_count, "Expression Type::", expression_node.type)
+        # may need to accept reltainal later
+        if expression_node.next_simple_expr is not None:
+            expression_node.next_simple_expr.accept(self)
+            self.dec_tab_count()
+        if expression_node.Type is not None:
+            print('\t' * self.tab_count, "Expression Type::", expression_node.Type)
 
     # def visit_expression_node(self, expression_node):
     #     self.node_count += 1
