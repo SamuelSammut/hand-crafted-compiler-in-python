@@ -216,18 +216,22 @@ class Lexer:
 
         for letter in self.all_except_l:
             self.Tx[12][self.lexeme_list.index(letter)] = 53
+        self.Tx[12][self.lexeme_list.index("letter")] = 53
         self.Tx[12][self.lexeme_list.index("l_letter")] = 13
 
         for letter in self.all_except_o:
             self.Tx[13][self.lexeme_list.index(letter)] = 53
+        self.Tx[13][self.lexeme_list.index("letter")] = 53
         self.Tx[13][self.lexeme_list.index("o_letter")] = 14
 
         for letter in self.all_except_a:
             self.Tx[14][self.lexeme_list.index(letter)] = 53
+        self.Tx[14][self.lexeme_list.index("letter")] = 53
         self.Tx[14][self.lexeme_list.index("a_letter")] = 15
 
         for letter in self.all_except_t:
             self.Tx[15][self.lexeme_list.index(letter)] = 53
+        self.Tx[15][self.lexeme_list.index("letter")] = 53
         self.Tx[15][self.lexeme_list.index("t_letter")] = 16
 
         for letter in self.needed_letters_list:
@@ -241,10 +245,12 @@ class Lexer:
 
         for letter in self.all_except_n:
             self.Tx[17][self.lexeme_list.index(letter)] = 53
+        self.Tx[17][self.lexeme_list.index("letter")] = 53
         self.Tx[17][self.lexeme_list.index("n_letter")] = 18
 
         for letter in self.all_except_t:
             self.Tx[18][self.lexeme_list.index(letter)] = 53
+        self.Tx[18][self.lexeme_list.index("letter")] = 53
         self.Tx[18][self.lexeme_list.index("t_letter")] = 19
 
         for letter in self.needed_letters_list:
@@ -258,14 +264,17 @@ class Lexer:
 
         for letter in self.all_except_o:
             self.Tx[20][self.lexeme_list.index(letter)] = 53
+        self.Tx[20][self.lexeme_list.index("letter")] = 53
         self.Tx[20][self.lexeme_list.index("o_letter")] = 21
 
         for letter in self.all_except_o:
             self.Tx[21][self.lexeme_list.index(letter)] = 53
+        self.Tx[21][self.lexeme_list.index("letter")] = 53
         self.Tx[21][self.lexeme_list.index("o_letter")] = 22
 
         for letter in self.all_except_l:
             self.Tx[22][self.lexeme_list.index(letter)] = 53
+        self.Tx[22][self.lexeme_list.index("letter")] = 53
         self.Tx[22][self.lexeme_list.index("l_letter")] = 23
 
         for letter in self.needed_letters_list:
@@ -279,22 +288,27 @@ class Lexer:
 
         for letter in self.all_except_o:
             self.Tx[24][self.lexeme_list.index(letter)] = 53
+        self.Tx[24][self.lexeme_list.index("letter")] = 53
         self.Tx[24][self.lexeme_list.index("o_letter")] = 25
 
         for letter in self.all_except_l:
             self.Tx[25][self.lexeme_list.index(letter)] = 53
+        self.Tx[25][self.lexeme_list.index("letter")] = 53
         self.Tx[25][self.lexeme_list.index("l_letter")] = 26
 
         for letter in self.all_except_o:
             self.Tx[26][self.lexeme_list.index(letter)] = 53
+        self.Tx[26][self.lexeme_list.index("letter")] = 53
         self.Tx[26][self.lexeme_list.index("o_letter")] = 27
 
         for letter in self.all_except_u:
             self.Tx[27][self.lexeme_list.index(letter)] = 53
+        self.Tx[27][self.lexeme_list.index("letter")] = 53
         self.Tx[27][self.lexeme_list.index("u_letter")] = 28
 
         for letter in self.all_except_r:
             self.Tx[28][self.lexeme_list.index(letter)] = 53
+        self.Tx[28][self.lexeme_list.index("letter")] = 53
         self.Tx[28][self.lexeme_list.index("r_letter")] = 29
 
         for letter in self.needed_letters_list:
@@ -310,14 +324,17 @@ class Lexer:
 
         for letter in self.all_except_r:
             self.Tx[30][self.lexeme_list.index(letter)] = 53
+        self.Tx[30][self.lexeme_list.index("letter")] = 53
         self.Tx[30][self.lexeme_list.index("r_letter")] = 31
 
         for letter in self.all_except_u:
             self.Tx[31][self.lexeme_list.index(letter)] = 53
+        self.Tx[31][self.lexeme_list.index("letter")] = 53
         self.Tx[31][self.lexeme_list.index("u_letter")] = 32
 
         for letter in self.all_except_e:
             self.Tx[32][self.lexeme_list.index(letter)] = 53
+        self.Tx[32][self.lexeme_list.index("letter")] = 53
         self.Tx[32][self.lexeme_list.index("e_letter")] = 33
 
         for letter in self.needed_letters_list:
@@ -335,18 +352,22 @@ class Lexer:
         for letter in self.all_except_a:
             if letter != "l_letter":
                 self.Tx[34][self.lexeme_list.index(letter)] = 53
+        self.Tx[34][self.lexeme_list.index("letter")] = 53
         self.Tx[34][self.lexeme_list.index("a_letter")] = 35
 
         for letter in self.all_except_l:
             self.Tx[35][self.lexeme_list.index(letter)] = 53
+        self.Tx[35][self.lexeme_list.index("letter")] = 53
         self.Tx[35][self.lexeme_list.index("l_letter")] = 36
 
         for letter in self.all_except_s:
             self.Tx[36][self.lexeme_list.index(letter)] = 53
+        self.Tx[36][self.lexeme_list.index("letter")] = 53
         self.Tx[36][self.lexeme_list.index("s_letter")] = 37
 
         for letter in self.all_except_e:
             self.Tx[37][self.lexeme_list.index(letter)] = 53
+        self.Tx[37][self.lexeme_list.index("letter")] = 53
         self.Tx[37][self.lexeme_list.index("e_letter")] = 38
 
         for letter in self.needed_letters_list:
@@ -364,10 +385,12 @@ class Lexer:
 
         for letter in self.all_except_n:
             self.Tx[50][self.lexeme_list.index(letter)] = 53
+        self.Tx[50][self.lexeme_list.index("letter")] = 53
         self.Tx[50][self.lexeme_list.index("n_letter")] = 51
 
         for letter in self.all_except_d:
             self.Tx[51][self.lexeme_list.index(letter)] = 53
+        self.Tx[51][self.lexeme_list.index("letter")] = 53
         self.Tx[51][self.lexeme_list.index("d_letter")] = 52
 
         for letter in self.needed_letters_list:
@@ -384,6 +407,7 @@ class Lexer:
 
         for letter in self.all_except_r:
             self.Tx[48][self.lexeme_list.index(letter)] = 53
+        self.Tx[48][self.lexeme_list.index("letter")] = 53
         self.Tx[48][self.lexeme_list.index("r_letter")] = 49
 
         for letter in self.needed_letters_list:
@@ -405,6 +429,7 @@ class Lexer:
         # Identifier
         for letter in self.needed_letters_list:
             self.Tx[53][self.lexeme_list.index(letter)] = 53
+        self.Tx[53][self.lexeme_list.index("letter")] = 53
         self.Tx[0][self.lexeme_list.index("letter")] = 53
         self.Tx[53][self.lexeme_list.index("letter")] = 53
         self.Tx[53][self.lexeme_list.index("digit")] = 53
@@ -557,6 +582,7 @@ class Lexer:
         for letter in self.needed_letters_list:
             self.Tx[129][self.lexeme_list.index(letter)] = 53
         self.Tx[129][self.lexeme_list.index("letter")] = 53
+        self.Tx[129][self.lexeme_list.index("letter")] = 53
         self.Tx[129][self.lexeme_list.index("digit")] = 53
         self.Tx[129][self.lexeme_list.index("_")] = 53
 
@@ -566,18 +592,22 @@ class Lexer:
 
         for letter in self.all_except_h:
             self.Tx[130][self.lexeme_list.index(letter)] = 53
+        self.Tx[130][self.lexeme_list.index("letter")] = 53
         self.Tx[130][self.lexeme_list.index("h_letter")] = 131
 
         for letter in self.all_except_i:
             self.Tx[131][self.lexeme_list.index(letter)] = 53
+        self.Tx[131][self.lexeme_list.index("letter")] = 53
         self.Tx[131][self.lexeme_list.index("i_letter")] = 132
 
         for letter in self.all_except_l:
             self.Tx[132][self.lexeme_list.index(letter)] = 53
+        self.Tx[132][self.lexeme_list.index("letter")] = 53
         self.Tx[132][self.lexeme_list.index("l_letter")] = 133
 
         for letter in self.all_except_e:
             self.Tx[133][self.lexeme_list.index(letter)] = 53
+        self.Tx[133][self.lexeme_list.index("letter")] = 53
         self.Tx[133][self.lexeme_list.index("e_letter")] = 134
 
         for letter in self.needed_letters_list:
@@ -595,10 +625,12 @@ class Lexer:
         for letter in self.all_except_u:
             if letter != "o_letter" and letter != "l_letter" and letter != "a_letter":
                 self.Tx[135][self.lexeme_list.index(letter)] = 53
+        self.Tx[135][self.lexeme_list.index("letter")] = 53
         self.Tx[135][self.lexeme_list.index("u_letter")] = 136
 
         for letter in self.all_except_n:
             self.Tx[136][self.lexeme_list.index(letter)] = 53
+        self.Tx[136][self.lexeme_list.index("letter")] = 53
         self.Tx[136][self.lexeme_list.index("n_letter")] = 137
 
         for letter in self.needed_letters_list:
@@ -613,10 +645,12 @@ class Lexer:
 
         for letter in self.all_except_e:
             self.Tx[138][self.lexeme_list.index(letter)] = 53
+        self.Tx[138][self.lexeme_list.index("letter")] = 53
         self.Tx[138][self.lexeme_list.index("e_letter")] = 139
 
         for letter in self.all_except_t:
             self.Tx[139][self.lexeme_list.index(letter)] = 53
+        self.Tx[139][self.lexeme_list.index("letter")] = 53
         self.Tx[139][self.lexeme_list.index("t_letter")] = 140
 
         for letter in self.needed_letters_list:
@@ -631,10 +665,12 @@ class Lexer:
 
         for letter in self.all_except_o:
             self.Tx[157][self.lexeme_list.index(letter)] = 53
+        self.Tx[157][self.lexeme_list.index("letter")] = 53
         self.Tx[157][self.lexeme_list.index("o_letter")] = 158
 
         for letter in self.all_except_t:
             self.Tx[158][self.lexeme_list.index(letter)] = 53
+        self.Tx[158][self.lexeme_list.index("letter")] = 53
         self.Tx[158][self.lexeme_list.index("t_letter")] = 159
 
         for letter in self.needed_letters_list:
@@ -646,11 +682,17 @@ class Lexer:
         # as
 
         self.Tx[0][self.lexeme_list.index("a_letter")] = 160
+
+        for letter in self.all_except_n:
+            self.Tx[160][self.lexeme_list.index(letter)] = 53
+        self.Tx[160][self.lexeme_list.index("letter")] = 53
+        self.Tx[160][self.lexeme_list.index("letter")] = 53
         self.Tx[160][self.lexeme_list.index("n_letter")] = 51
 
         for letter in self.all_except_s:
             if letter != "n_letter":
              self.Tx[160][self.lexeme_list.index(letter)] = 53
+        self.Tx[160][self.lexeme_list.index("letter")] = 53
         self.Tx[160][self.lexeme_list.index("s_letter")] = 161
 
         # else
@@ -658,12 +700,15 @@ class Lexer:
 
         for letter in self.all_except_e:
              self.Tx[141][self.lexeme_list.index(letter)] = 53
+        self.Tx[141][self.lexeme_list.index("letter")] = 53
         self.Tx[141][self.lexeme_list.index("l_letter")] = 142
         for letter in self.all_except_s:
              self.Tx[142][self.lexeme_list.index(letter)] = 53
+        self.Tx[142][self.lexeme_list.index("letter")] = 53
         self.Tx[142][self.lexeme_list.index("s_letter")] = 143
         for letter in self.all_except_e:
              self.Tx[143][self.lexeme_list.index(letter)] = 53
+        self.Tx[143][self.lexeme_list.index("letter")] = 53
         self.Tx[143][self.lexeme_list.index("e_letter")] = 145
         for letter in self.needed_letters_list:
             self.Tx[145][self.lexeme_list.index(letter)] = 53
@@ -800,11 +845,11 @@ class Lexer:
 
         return tokens_list
 
-#
-# lex = Lexer()
-# toks = lex.GenerateTokens(" or")
-#
-# for t in toks:
-#     print(t.type, t.lexeme)
-#
+
+lex = Lexer()
+toks = lex.GenerateTokens(" nqwe")
+
+for t in toks:
+    print(t.type, t.lexeme)
+
 

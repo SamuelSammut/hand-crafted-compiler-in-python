@@ -26,11 +26,12 @@ class ASTProgramNode(ASTNode):
 
 
 class ASTExpressionNode(ASTNode):
-    def __init__(self, simple_expressions, Type=None):
+    def __init__(self, simple_expr1, relational_op, simple_expr2, Type=None):
         self.name = "ASTExpressionNode"
-        self.simple_expressions = simple_expressions
+        self.simple_expr1 = simple_expr1
+        self.relational_op = relational_op
+        self.simple_expr2 = simple_expr2
         self.Type = Type
-
     def accept(self, visitor):
         visitor.visit_expression_node(self)
 
@@ -66,8 +67,9 @@ class ASTFunctionDeclarationNode(ASTStatementNode):
 
 
 class ASTUnaryNode(ASTExpressionNode):
-    def __init__(self, expr):
+    def __init__(self, unary_op, expr):
         self.name = "ASTUnaryNode"
+        self.unary_op = unary_op
         self.expr = expr
 
     def accept(self, visitor):
@@ -83,19 +85,12 @@ class ASTActualParams(ASTExpressionNode):
         visitor.visit_actual_params_node(self)
 
 
-class ASTTermNode(ASTExpressionNode):
-    def __init__(self, factors):
-        self.name = "ASTTermNode"
-        self.factors = factors
-
-    def accept(self, visitor):
-        visitor.visit_term_node(self)
-
-
 class ASTSimpleExpressionNode(ASTExpressionNode):
-    def __init__(self, term):
+    def __init__(self, term1, additive_op, term2):
         self.name = "ASTSimpleExpressionNode"
-        self.term = term
+        self.term1 = term1
+        self.additive_op = additive_op
+        self.term2 = term2
 
     def accept(self, visitor):
         visitor.visit_simple_expression_node(self)
@@ -468,9 +463,6 @@ class ASTVisitor:
     def visit_function_declaration_node(self, node):
         raise NotImplementedError
 
-    def visit_term_node(self, node):
-        raise NotImplementedError
-
 
 class PrintNodesVisitor(ASTVisitor):
     def __init__(self):
@@ -493,8 +485,10 @@ class PrintNodesVisitor(ASTVisitor):
         print('\t' * self.tab_count, "Multiplicative operator::", term_node.multiplicative_op)
         self.inc_tab_count()
         term_node.factor1.accept(self)
+        # may need to accept multop later
         term_node.factor2.accept(self)
         self.dec_tab_count()
+
     def visit_integer_literal_node(self, int_node):
         self.node_count += 1
         print('\t' * self.tab_count, "Integer value::", int_node.value)
@@ -572,7 +566,7 @@ class PrintNodesVisitor(ASTVisitor):
 
     def visit_literal_node(self, literal_node):
         self.node_count += 1
-        print('\t' * self.tab_count, "Literal node => ")
+        # print('\t' * self.tab_count, "Literal node => ")
         self.inc_tab_count()
         literal_node.literal.accept(self)
         self.dec_tab_count()
@@ -617,57 +611,50 @@ class PrintNodesVisitor(ASTVisitor):
 
     def visit_unary_node(self, unary_node):
         self.node_count += 1
-        print('\t' * self.tab_count, "Unary node => ")
+        print('\t' * self.tab_count, "Unary node => ", unary_node.unary_op)
         self.inc_tab_count()
         unary_node.expr.accept(self)
         self.dec_tab_count()
 
     def visit_factor_node(self, factor_node):
         self.node_count += 1
-        print('\t' * self.tab_count, "Factor node => ")
+        # print('\t' * self.tab_count, "Factor node => ")
         self.inc_tab_count()
         factor_node.factor.accept(self)
         self.dec_tab_count()
 
-    # def visit_term_node(self, term_node):
-    #     self.node_count += 1
-    #     print('\t' * self.tab_count, "Term node => ")
-    #     self.inc_tab_count()
-    #     for term in term_node.factor:
-    #         term.accept(self)
-    #     self.dec_tab_count()
-
-    def visit_term_node(self, term_node):
-        self.node_count += 1
-        print('\t' * self.tab_count, "Term node => ")
-        self.inc_tab_count()
-
-        for factor in term_node.factors:
-            factor.accept(self)
-
-        self.dec_tab_count()
-
     def visit_simple_expression_node(self, simple_expression_node):
         self.node_count += 1
-        print('\t' * self.tab_count, "Simple expression node => ")
+        print('\t' * self.tab_count, "Additive operator node => ", simple_expression_node.additive_op)
         self.inc_tab_count()
-        for simple_expr in simple_expression_node.term:
-            simple_expr.accept(self)
+        simple_expression_node.term1.accept(self)
+        # may need to accept addtive op later
+        simple_expression_node.term2.accept(self)
         self.dec_tab_count()
-
+#
     def visit_expression_node(self, expression_node):
         self.node_count += 1
-        print('\t' * self.tab_count, "Expression node => ")
+        print('\t' * self.tab_count, "Relational operator::", expression_node.relational_op)
         self.inc_tab_count()
-        for simple_expr in expression_node.simple_expressions:
-            simple_expr.accept(self)
-        if expression_node.Type is not None:
-            expression_node.Type.accept(self)
+        expression_node.simple_expr1.accept(self)
+        # may need to accept multop later
+        expression_node.simple_expr2.accept(self)
         self.dec_tab_count()
+        if expression_node.expression_type is not None:
+            print('\t' * self.tab_count, "Expression Type::", expression_node.type)
+
+    # def visit_expression_node(self, expression_node):
+    #     self.node_count += 1
+    #     print('\t' * self.tab_count, "Relational operator::", expression_node.relational_op)
+    #     self.inc_tab_count()
+    #     expression_node.simple_expr1.accept(self)
+    #     # may need to accept multop later
+    #     expression_node.simple_expr2.accept(self)
+    #     self.dec_tab_count()
 
     def visit_variable_declaration_suffix_node(self, variable_declaration_suffix_node):
         self.node_count += 1
-        print('\t' * self.tab_count, "Variable declaration suffix node => ")
+        # print('\t' * self.tab_count, "Variable declaration suffix node => ")
         self.inc_tab_count()
         variable_declaration_suffix_node.type.accept(self)
         variable_declaration_suffix_node.expr.accept(self)

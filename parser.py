@@ -62,7 +62,7 @@ class Parser:
             self.NextToken()
             print("Float Literal Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
         elif self.crtToken.type == lex.TokenType.COLOUR_LITERAL:
-            literal = ast.ASTBooleanLiteralNode(self.crtToken.lexeme)
+            literal = ast.ASTColourLiteralNode(self.crtToken.lexeme)
             self.NextToken()
             print("Colour Literal Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
         elif self.crtToken.type == lex.TokenType.PAD_WIDTH:
@@ -112,29 +112,77 @@ class Parser:
         return ast.ASTActualParams(actualParams)
 
     def ParseExpression(self):
-        simpleExpressions = []
-        simpleExpression1 = self.ParseSimpleExpression()
-        if simpleExpression1 is None:
-            raise Exception("Expected a simple expression to start parsing an expression")
-        simpleExpressions.append(simpleExpression1)
+        simpleExpr1 = self.ParseSimpleExpression()
+
+        if simpleExpr1 is None:
+            raise Exception("First factor in term is null.")
+
+        relational_op = None
+        simpleExpr2 = None
+
         while self.crtToken.type == lex.TokenType.RELATIONAL_OPERAND:
+            relational_op = self.crtToken.lexeme
+            if relational_op is None:
+                raise Exception("Relational operator expected")
             self.NextToken()
-            simpleExpressionN = self.ParseSimpleExpression()
-            if simpleExpressionN is None:
-                raise Exception("No simple expression following relational operand in expression parsing.")
-            simpleExpressions.append(simpleExpressionN)
-            # self.NextToken()
+
+            next_simple_expr = self.ParseSimpleExpression()
+
+            simpleExpr1 = ast.ASTExpressionNode(simpleExpr1, relational_op, next_simple_expr, type = None)
+
         if self.crtToken.type == lex.TokenType.AS:
             self.NextToken()
-            if self.crtToken.type == lex.TokenType.TYPE:
-                Type = ast.ASTTypeNode(self.crtToken.lexeme)
-                self.NextToken()
-                if Type is None:
-                    raise Exception("Expected 'AS' keyword and Type after simple expression.")
-                else:
-                    return ast.ASTExpressionNode(simpleExpressions, Type)
-        else:
-            return ast.ASTExpressionNode(simpleExpressions)
+
+            # Parse the Type
+            Type = ast.ASTTypeNode(self.crtToken.lexeme) #
+
+            return ast.ASTExpressionNode(simpleExpr1, type = Type)
+
+        return simpleExpr1
+
+    # def ParseExpression(self):
+    #     simpleExpr1 = self.ParseSimpleExpression()
+    #     if simpleExpr1 is None:
+    #         raise Exception("First factor in term is null.")
+    #     relational_op = None
+    #     simpleExpr2 = None
+    #
+    #     while self.crtToken.type == lex.TokenType.RELATIONAL_OPERAND:
+    #         relational_op = self.crtToken.lexeme
+    #         if relational_op is None:
+    #             raise Exception("Multiplicative operator expected")
+    #         self.NextToken()
+    #
+    #         next_simple_expr = self.ParseSimpleExpression()
+    #
+    #         simpleExpr1 = ast.ASTExpressionNode(simpleExpr1, relational_op, next_simple_expr)
+    #
+    #     return simpleExpr1
+
+    # def ParseExpression(self):
+    #     simpleExpressions = []
+    #     simpleExpression1 = self.ParseSimpleExpression()
+    #     if simpleExpression1 is None:
+    #         raise Exception("Expected a simple expression to start parsing an expression")
+    #     simpleExpressions.append(simpleExpression1)
+    #     while self.crtToken.type == lex.TokenType.RELATIONAL_OPERAND:
+    #         self.NextToken()
+    #         simpleExpressionN = self.ParseSimpleExpression()
+    #         if simpleExpressionN is None:
+    #             raise Exception("No simple expression following relational operand in expression parsing.")
+    #         simpleExpressions.append(simpleExpressionN)
+    #         # self.NextToken()
+    #     if self.crtToken.type == lex.TokenType.AS:
+    #         self.NextToken()
+    #         if self.crtToken.type == lex.TokenType.TYPE:
+    #             Type = ast.ASTTypeNode(self.crtToken.lexeme)
+    #             self.NextToken()
+    #             if Type is None:
+    #                 raise Exception("Expected 'AS' keyword and Type after simple expression.")
+    #             else:
+    #                 return ast.ASTExpressionNode(simpleExpressions, Type)
+    #     else:
+    #         return ast.ASTExpressionNode(simpleExpressions)
 
     def ParsePadRead(self):
         if self.crtToken.type == lex.TokenType.PAD_READ:
@@ -161,11 +209,12 @@ class Parser:
 
     def ParseUnary(self):
         if self.crtToken.type == lex.TokenType.NOT or self.crtToken.lexeme == "-":
+            unary_op = self.crtToken.lexeme
             self.NextToken()
             expr = self.ParseExpression()
             if expr is None:
                 raise Exception("Expected expression after - or not.")
-            return ast.ASTUnaryNode(expr)
+            return ast.ASTUnaryNode(unary_op, expr)
         else:
             raise Exception("Expected expression to follow - or 'not'. ")
 
@@ -223,106 +272,58 @@ class Parser:
         else:
             raise Exception("Expected assignment to start with identifier")
 
-    # def ParseTerm(self):
-    #     factor1 = self.ParseFactor()
-    #     if self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
-    #         multiplicative_op = self.crtToken.lexeme
-    #         self.NextToken()
-    #         factor2 = self.ParseFactor()
-    #
-    #     return ast.ASTMultiplicativeOperatorNode(factor1, multiplicative_op, factor2)
-
     def ParseTerm(self):
-        factor1 = self.ParseFactor()  # Parse the first factor
+        factor1 = self.ParseFactor()
         if factor1 is None:
             raise Exception("First factor in term is null.")
-        # Initialize variables for multiplicative operation and second factor
         multiplicative_op = None
         factor2 = None
 
         # Check if there are additional factors with multiplicative operators
         while self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
-            # Get the multiplicative operator
             multiplicative_op = self.crtToken.lexeme
+            if multiplicative_op is None:
+                raise Exception("Multiplicative operator expected")
             self.NextToken()
 
-            # Parse the next factor
             next_factor = self.ParseFactor()
 
-            # Create a new node with the previous factor, multiplicative operator, and the current factor
-            factor1 = ast.ASTMultiplicativeOperatorNode(factor1, multiplicative_op, next_factor)
+            factor1 = ast.ASTTermNode(factor1, multiplicative_op, next_factor)
 
-        # Return the final factor or the factor with multiplicative operations
         return factor1
 
 
-
-    # def ParseTerm(self):
-    #     nexToken = self.nextToken
-    #     factors = []
-    #     while self.nextToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
-    #         multiplicative_op = self.ParseMultiplicativeOperator(self.nextToken)
-    #         factorN = self.ParseFactor()
-    #         factors.append(factorN)
+    # def ParseSimpleExpression(self):
+    #     terms = []
+    #     term1 = self.ParseTerm()
+    #     terms.append(term1)
+    #     if term1 is None:
+    #         raise Exception("Initial term empty when parsing simple expression.")
+    #     while self.crtToken.type == lex.TokenType.ADDITIVE_OPERAND:
     #         self.NextToken()
-    #         if multiplicative_op is None:
-    #             raise Exception("Expected multiplicative operator to not be null when parsing term.")
-    #     self.NextToken()
-    #     return ast.ASTTermNode(factors)
-
-        # else:
-        #     factor = self.ParseFactor()
-        #     if factor is None:
-        #         raise Exception("Expected factor to not be null when parsing term.")
-        #     else:
-        #         return ast.ASTFactorNode(factor)
-    # def ParseTerm(self):
-    #     factors = []
-    #     nexToken = self.nextToken # Peeking at next token
-    #     factor1 = self.ParseFactor()
-    #     factors.append((None, factor1))  # Initialize with None for the initial operator
-    #     if factor1 is None:
-    #         raise Exception("Initial factor empty when parsing terms.")
-    #     while self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
-    #         multiplicative_op = ast.ASTMultiplicativeOperatorNode(self.crtToken.lexeme)
-    #         if multiplicative_op is None:
-    #             raise Exception("Multiplicative operand in term is null.")
-    #         else:
-    #             self.NextToken()
-    #             factorN = self.ParseFactor()
-    #             if factorN is None:
-    #                 raise Exception("No factor following multiplicative operand in term parsing.")
-    #             factors.append((multiplicative_op, factorN))
-    #     return ast.ASTTermNode(factors)
-
-    # def ParseTerm(self):
-    #     factors = []
-    #     factor1 = self.ParseFactor()
-    #     factors.append(factor1)
-    #     if factor1 is None:
-    #         raise Exception("Initial factor empty when parsing terms.")
-    #     while self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
-    #         mul
-    #         self.NextToken()
-    #         factorN = self.ParseFactor()
-    #         if factorN is None:
-    #             raise Exception("No factor following multiplicative operand in term parsing.")
-    #         factors.append(factorN)
-    #     return ast.ASTTermNode(factors)
-
+    #         termsN = self.ParseTerm()
+    #         if termsN is None:
+    #             raise Exception("No term following additive operand in simple expression parsing.")
+    #         terms.append(termsN)
+    #     return ast.ASTSimpleExpressionNode(terms)
     def ParseSimpleExpression(self):
-        terms = []
         term1 = self.ParseTerm()
-        terms.append(term1)
         if term1 is None:
-            raise Exception("Initial term empty when parsing simple expression.")
+            raise Exception("First factor in term is null.")
+        additive_op = None
+        term2 = None
+
         while self.crtToken.type == lex.TokenType.ADDITIVE_OPERAND:
+            additive_op = self.crtToken.lexeme
+            if additive_op is None:
+                raise Exception("Additive operator expected.")
             self.NextToken()
-            termsN = self.ParseTerm()
-            if termsN is None:
-                raise Exception("No term following additive operand in simple expression parsing.")
-            terms.append(termsN)
-        return ast.ASTSimpleExpressionNode(terms)
+
+            nextTerm = self.ParseTerm()
+
+            term1 = ast.ASTSimpleExpressionNode(term1, additive_op, nextTerm)
+
+        return term1
 
     def ParseVariableDeclarationSuffix(self):
         if self.crtToken.type == lex.TokenType.COLON:
@@ -409,6 +410,7 @@ class Parser:
             if expression is None:
                 raise Exception("Expected expression after return statement")
             else:
+                self.NextToken()
                 return ast.ASTReturnStatementNode(expression)
 
         else:
@@ -775,8 +777,10 @@ class Parser:
     def Parse(self):
         self.ASTroot = self.ParseProgram()
 
-
-parser = Parser(" let x : int = 3;");
+parser = Parser("fun AverageOfTwo(x: int, y: int) -> float {"
+                "let t0: int = x + y;"
+                "let t1: float = t0 / 2 as float;"
+                " return t1;}")
 parser.Parse()
 print_visitor = ast.PrintNodesVisitor()
 parser.ASTroot.accept(print_visitor)
