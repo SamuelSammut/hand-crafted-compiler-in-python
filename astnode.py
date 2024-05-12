@@ -84,9 +84,9 @@ class ASTActualParams(ASTExpressionNode):
 
 
 class ASTTermNode(ASTExpressionNode):
-    def __init__(self, factor):
+    def __init__(self, factors):
         self.name = "ASTTermNode"
-        self.factor = factor
+        self.factors = factors
 
     def accept(self, visitor):
         visitor.visit_term_node(self)
@@ -220,13 +220,15 @@ class ASTLiteralNode(ASTAssignmentNode):
         visitor.visit_literal_node(self)
 
 
-class ASTMultiplicativeOperatorNode(ASTNode):
-    def __init__(self, multiplicative_op):
-        self.name = "ASTMultiplicativeOperatorNode"
+class ASTTermNode(ASTNode):
+    def __init__(self, factor1, multiplicative_op, factor2):
+        self.name = "ASTTermNode"
+        self.factor1 = factor1
         self.multiplicative_op = multiplicative_op
+        self.factor2 = factor2
 
     def accept(self, visitor):
-        visitor.visit_multiplicative_op(self)
+        visitor.visit_term_node(self)
 
 
 class ASTBooleanLiteralNode(ASTLiteralNode):
@@ -466,7 +468,7 @@ class ASTVisitor:
     def visit_function_declaration_node(self, node):
         raise NotImplementedError
 
-    def visit_multiplicative_op(self, node):
+    def visit_term_node(self, node):
         raise NotImplementedError
 
 
@@ -486,10 +488,13 @@ class PrintNodesVisitor(ASTVisitor):
         self.node_count += 1
         print('\t' * self.tab_count, "Boolean literal:", boolean_literal_node.value)
 
-    def visit_multiplicative_op(self, multiplicative_op_node):
+    def visit_term_node(self, term_node):
         self.node_count += 1
-        print('\t' * self.tab_count, "Multiplicative operator::", multiplicative_op_node.multiplicative_op)
-
+        print('\t' * self.tab_count, "Multiplicative operator::", term_node.multiplicative_op)
+        self.inc_tab_count()
+        term_node.factor1.accept(self)
+        term_node.factor2.accept(self)
+        self.dec_tab_count()
     def visit_integer_literal_node(self, int_node):
         self.node_count += 1
         print('\t' * self.tab_count, "Integer value::", int_node.value)
@@ -517,6 +522,14 @@ class PrintNodesVisitor(ASTVisitor):
         ass_node.id.accept(self)
         ass_node.expr.accept(self)
         self.dec_tab_count()
+
+    # def visit_multiplicative_op(self, multiplicative_node):
+    #     self.node_count += 1
+    #     print('\t' * self.tab_count, "Multiplicative node => ")
+    #     self.inc_tab_count()
+    #     multiplicative_node.factor1.accept(self)
+    #     multiplicative_node.factor2.accept(self)
+    #     self.dec_tab_count()
 
     def visit_identifier_node(self, identifier_node):
         self.node_count += 1
@@ -616,12 +629,22 @@ class PrintNodesVisitor(ASTVisitor):
         factor_node.factor.accept(self)
         self.dec_tab_count()
 
+    # def visit_term_node(self, term_node):
+    #     self.node_count += 1
+    #     print('\t' * self.tab_count, "Term node => ")
+    #     self.inc_tab_count()
+    #     for term in term_node.factor:
+    #         term.accept(self)
+    #     self.dec_tab_count()
+
     def visit_term_node(self, term_node):
         self.node_count += 1
         print('\t' * self.tab_count, "Term node => ")
         self.inc_tab_count()
-        for term in term_node.factor:
-            term.accept(self)
+
+        for factor in term_node.factors:
+            factor.accept(self)
+
         self.dec_tab_count()
 
     def visit_simple_expression_node(self, simple_expression_node):

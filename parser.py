@@ -22,6 +22,8 @@ class Parser:
 
     def PeekNextToken(self, k=1):
         peek_index = self.index + k
+        while peek_index < len(self.tokens) and self.tokens[peek_index].type == lex.TokenType.WS:
+            peek_index += 1  # Skip over whitespace tokens
         if peek_index < len(self.tokens):
             return self.tokens[peek_index]
         else:
@@ -221,24 +223,92 @@ class Parser:
         else:
             raise Exception("Expected assignment to start with identifier")
 
+    # def ParseTerm(self):
+    #     factor1 = self.ParseFactor()
+    #     if self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
+    #         multiplicative_op = self.crtToken.lexeme
+    #         self.NextToken()
+    #         factor2 = self.ParseFactor()
+    #
+    #     return ast.ASTMultiplicativeOperatorNode(factor1, multiplicative_op, factor2)
+
     def ParseTerm(self):
-        factors = []
-        factor1 = self.ParseFactor()
-        factors.append(factor1)
+        factor1 = self.ParseFactor()  # Parse the first factor
         if factor1 is None:
-            raise Exception("Initial factor empty when parsing terms.")
+            raise Exception("First factor in term is null.")
+        # Initialize variables for multiplicative operation and second factor
+        multiplicative_op = None
+        factor2 = None
+
+        # Check if there are additional factors with multiplicative operators
         while self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
-            multiplicative_op = ast.ASTMultiplicativeOperatorNode(self.crtToken.lexeme)
-            if multiplicative_op is None:
-                raise Exception("Multiplicative operand in term is null.")
-            else:
-                self.NextToken()
-                factorN = self.ParseFactor()
-                if factorN is None:
-                    raise Exception("No factor following multiplicative operand in term parsing.")
-                factors.append(multiplicative_op)
-                factors.append(factorN)
-        return ast.ASTTermNode(factors)
+            # Get the multiplicative operator
+            multiplicative_op = self.crtToken.lexeme
+            self.NextToken()
+
+            # Parse the next factor
+            next_factor = self.ParseFactor()
+
+            # Create a new node with the previous factor, multiplicative operator, and the current factor
+            factor1 = ast.ASTMultiplicativeOperatorNode(factor1, multiplicative_op, next_factor)
+
+        # Return the final factor or the factor with multiplicative operations
+        return factor1
+
+
+
+    # def ParseTerm(self):
+    #     nexToken = self.nextToken
+    #     factors = []
+    #     while self.nextToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
+    #         multiplicative_op = self.ParseMultiplicativeOperator(self.nextToken)
+    #         factorN = self.ParseFactor()
+    #         factors.append(factorN)
+    #         self.NextToken()
+    #         if multiplicative_op is None:
+    #             raise Exception("Expected multiplicative operator to not be null when parsing term.")
+    #     self.NextToken()
+    #     return ast.ASTTermNode(factors)
+
+        # else:
+        #     factor = self.ParseFactor()
+        #     if factor is None:
+        #         raise Exception("Expected factor to not be null when parsing term.")
+        #     else:
+        #         return ast.ASTFactorNode(factor)
+    # def ParseTerm(self):
+    #     factors = []
+    #     nexToken = self.nextToken # Peeking at next token
+    #     factor1 = self.ParseFactor()
+    #     factors.append((None, factor1))  # Initialize with None for the initial operator
+    #     if factor1 is None:
+    #         raise Exception("Initial factor empty when parsing terms.")
+    #     while self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
+    #         multiplicative_op = ast.ASTMultiplicativeOperatorNode(self.crtToken.lexeme)
+    #         if multiplicative_op is None:
+    #             raise Exception("Multiplicative operand in term is null.")
+    #         else:
+    #             self.NextToken()
+    #             factorN = self.ParseFactor()
+    #             if factorN is None:
+    #                 raise Exception("No factor following multiplicative operand in term parsing.")
+    #             factors.append((multiplicative_op, factorN))
+    #     return ast.ASTTermNode(factors)
+
+    # def ParseTerm(self):
+    #     factors = []
+    #     factor1 = self.ParseFactor()
+    #     factors.append(factor1)
+    #     if factor1 is None:
+    #         raise Exception("Initial factor empty when parsing terms.")
+    #     while self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
+    #         mul
+    #         self.NextToken()
+    #         factorN = self.ParseFactor()
+    #         if factorN is None:
+    #             raise Exception("No factor following multiplicative operand in term parsing.")
+    #         factors.append(factorN)
+    #     return ast.ASTTermNode(factors)
 
     def ParseSimpleExpression(self):
         terms = []
@@ -706,7 +776,7 @@ class Parser:
         self.ASTroot = self.ParseProgram()
 
 
-parser = Parser("let x : int = y * 1;")
+parser = Parser(" let x : int = 3;");
 parser.Parse()
 print_visitor = ast.PrintNodesVisitor()
 parser.ASTroot.accept(print_visitor)
