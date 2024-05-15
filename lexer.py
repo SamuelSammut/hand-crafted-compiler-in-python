@@ -949,11 +949,11 @@ class Lexer:
 
         return tokens_list
 
-
-lex = Lexer()
-toks = lex.GenerateTokens(" __randi")
-
-for t in toks:
-    print(t.type, t.lexeme)
+#
+# lex = Lexer()
+# toks = lex.GenerateTokens(" __randi")
+#
+# for t in toks:
+#     print(t.type, t.lexeme)
 
 

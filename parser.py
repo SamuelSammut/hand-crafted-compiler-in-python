@@ -1,8 +1,7 @@
-# Now we need the parser (using tokens produced by the Lexer) to build the AST - this code snipper is able to build ASTAssignmentNode trees. LHS can only be an integer here ....
-# A small predictive recursive descent parser
-import astnode as ast
-import lexer as lex
 
+import ast_node as ast
+import lexer as lex
+# from print_ast_visitor import PrintNodesVisitor
 
 class Parser:
     def __init__(self, src_program_str):
@@ -378,6 +377,7 @@ class Parser:
     def ParseWriteStatement(self):
         expressionList = []
         if self.crtToken.type == lex.TokenType.WRITE_BOX:
+            write_type = "write_box"
             self.NextToken()
             for i in range(5):
                 expression = self.ParseExpression()
@@ -386,11 +386,11 @@ class Parser:
                     if self.crtToken.type == lex.TokenType.COMMA:
                         self.NextToken()
                     else:
-                        raise Exception("Expected a comma between expressions when parsing write statements.")
-                else:
-                    return ast.ASTWriteStatementBoxNode(expressionList)
+                        raise Exception("Expected a comma between expressions when parsing write_box statements.")
+            return ast.ASTWriteStatementBoxNode(write_type, expressionList)
 
         elif self.crtToken.type == lex.TokenType.WRITE:
+            write_type = "write"
             self.NextToken()
             for i in range(3):
                 expression = self.ParseExpression()
@@ -400,8 +400,7 @@ class Parser:
                         self.NextToken()
                     else:
                         raise Exception("Expected a comma between expressions when parsing write statements.")
-                else:
-                    return ast.ASTWriteStatementBoxNode(expressionList)
+            return ast.ASTWriteStatementBoxNode(write_type, expressionList)
 
         else:
             raise Exception("Expected Write statement to start with __write or __write_box")
@@ -642,7 +641,7 @@ class Parser:
                             if self.crtToken.type == lex.TokenType.ARROW:
                                 self.NextToken()
                                 if self.crtToken.type == lex.TokenType.TYPE:
-                                    Type = ast.ASTTypeNode
+                                    Type = ast.ASTTypeNode(self.crtToken.lexeme)
                                     self.NextToken()
                                     if Type is None:
                                         raise Exception("Type in function declaration is null.")
@@ -652,7 +651,7 @@ class Parser:
                                             raise Exception("Block in function declaration is null.")
                                         else:
                                             return ast.ASTFunctionDeclarationNode(identifier=identifier, Type=Type,
-                                                                                  block=block)
+                                                                                  block=block, formalParams=None)
                                 else:
                                     raise Exception("Expected type after arrow in function declaration. ")
                             else:
@@ -792,12 +791,15 @@ class Parser:
     def Parse(self):
         self.ASTroot = self.ParseProgram()
 
-
-parser = Parser("let c1: colour = #00ff00; "
-                "let c2: colour = #0000ff;"
-                "let m: int = __height;"
-                "let w: int = Race(c1, c2, m);"
-                "__print w;")
-parser.Parse()
-print_visitor = ast.PrintNodesVisitor()
-parser.ASTroot.accept(print_visitor)
+# parser = Parser("let x: int = 10;"
+#                 "let y: float = 3.14;"
+#                 "let z: bool = true;"
+#                 "let c: colour = #FF00FF;"
+#                 "x = 20;"
+#                 "y = 6.28;"
+#                 "z = false;"
+#                 "c = #00FF00;")
+# parser.Parse()
+#
+#
+# parser.ASTroot.accept(PrintNodesVisitor())

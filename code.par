@@ -1,0 +1,7 @@
+fun check_positive(value: int) -> int {
+    if (value >= 0) {
+        return 1;
+    }
+
+
+}
