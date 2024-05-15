@@ -8,10 +8,10 @@ class SymbolTable:
     def exit_scope(self):
         self.scopes.pop()
 
-    def add(self, name, data_type):
+    def add(self, name, info):
         if name in self.scopes[-1]:
             raise Exception(f"Variable or function '{name}' already declared in this scope")
-        self.scopes[-1][name] = data_type
+        self.scopes[-1][name] = info
 
     def lookup(self, name):
         for scope in reversed(self.scopes):
