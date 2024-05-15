@@ -1,7 +1,10 @@
-fun check_positive(value: int) -> int {
-    if (value >= 0) {
-        return 1;
+let w:int = __width;
+let h:int = __height;
+for(let u:int = 0; u <w; u = u+1)
+{
+    for (let v:int = 0; v<h; v =v+1)
+    {
+        __write_box u,v,1,1,#00ff00;
+        __write u,v,#00ff00;
     }
-
-
 }

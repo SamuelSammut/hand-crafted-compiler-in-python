@@ -1,6 +1,6 @@
 from ast_visitor import ASTVisitor
 from symbol_table import SymbolTable
-
+from ast_node import *
 
 class SemanticVisitor(ASTVisitor):
     def __init__(self):
@@ -121,6 +121,25 @@ class SemanticVisitor(ASTVisitor):
             raise Exception(f"Unary operator '-' requires an integer or float expression, got '{expr_type}'")
         return expr_type
 
+    def check_all_paths_return(self, statements):
+        all_paths_return = False
+        for statement in statements:
+            if isinstance(statement, ASTReturnStatementNode):
+                all_paths_return = True
+            elif isinstance(statement, ASTIfStatementNode):
+                if_return = self.check_all_paths_return(statement.block1.stmts)
+                else_return = self.check_all_paths_return(statement.block2.stmts) if statement.block2 else False
+                all_paths_return = if_return and else_return
+            elif isinstance(statement, ASTWhileStatementNode):
+                all_paths_return = self.check_all_paths_return(statement.block.stmts)
+            elif isinstance(statement, ASTBlockNode):
+                all_paths_return = self.check_all_paths_return(statement.stmts)
+            elif isinstance(statement, ASTStatementNode):
+                all_paths_return = self.check_all_paths_return([statement.statement])
+            if all_paths_return:
+                break
+        return all_paths_return
+
     def visit_function_declaration_node(self, node):
         identifier = node.identifier.lexeme
         if self.symbol_table.lookup_in_current_scope(identifier):
@@ -138,11 +157,11 @@ class SemanticVisitor(ASTVisitor):
             for param in node.formalParams.formal_params:
                 self.visit_formal_parameter_node(param)
 
-        for statement in node.block.stmts:
-            self.visit(statement)
+        # Track if we have a return statement on all paths
+        all_paths_return = self.check_all_paths_return(node.block.stmts)
 
-        if self.current_function_type != "void" and not self.return_encountered:
-            raise Exception(f"Function '{identifier}' is missing a return statement")
+        if not all_paths_return:
+            raise Exception(f"Function '{identifier}' is missing a return statement on some execution paths")
 
         self.symbol_table.exit_scope()
         self.current_function_type = None
