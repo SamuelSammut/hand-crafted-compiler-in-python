@@ -69,7 +69,10 @@ class CodeGenerationVisitor(ASTVisitor):
         })
         index = self.symbol_table.scopes[-1][identifier]['index']
         self.add_instruction("push 1", f"Allocate space for {identifier}")
-
+        if len(self.symbol_table.scopes[-1]) == 1:
+            self.add_instruction("oframe", "Create a new frame")
+        else:
+            self.add_instruction("alloc", "Allocate additional space in the current frame")
         self.add_instruction(f"push {expr_value}", f"Push initial value of {identifier}")
         self.add_instruction(f"push {index}", f"Push index for {identifier}")
         self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
