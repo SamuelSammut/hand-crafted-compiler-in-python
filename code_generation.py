@@ -31,7 +31,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def add_instruction(self, instruction, comment=''):
         if comment:
-            self.instructions.append(f"{instruction} ; {comment}")
+            self.instructions.append(f"{instruction} ")#; {comment}")
         else:
             self.instructions.append(instruction)
         self.next_instruction_address += 1
@@ -175,7 +175,6 @@ class CodeGenerationVisitor(ASTVisitor):
         simple_expr1_value = self.visit(node.simple_expr1)
         if node.next_simple_expr:
             next_simple_expr_value = self.visit(node.next_simple_expr)
-            self.add_instruction(f"push {simple_expr1_value}", "Push first operand for relational operation")
             self.add_instruction(f"push {next_simple_expr_value}", "Push second operand for relational operation")
             if node.relational_op == '<':
                 self.add_instruction("lt", "Perform less than operation")

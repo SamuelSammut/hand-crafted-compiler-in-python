@@ -1,7 +1,4 @@
-let a :int = 1;
-let b : int =2;
-if (a == b) {
-    __print(1);
-} else {
-    __print(0);
+let x :int = 5;
+if (x == 5) {
+    __print x;
 }

@@ -1,0 +1,21 @@
+.main
+push 1
+oframe
+push 5
+push 5
+st
+oframe
+push #PC+9
+push 5
+push [5 ]
+eq
+cjmp
+push 0
+print
+push #PC+4
+jmp
+push 1
+print
+cframe
+halt
+
