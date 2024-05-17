@@ -31,7 +31,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def add_instruction(self, instruction, comment=''):
         if comment:
-            self.instructions.append(f"{self.next_instruction_address}::   {instruction}")
+            self.instructions.append(f"{instruction}")
         else:
             self.instructions.append(instruction)
         self.next_instruction_address += 1
@@ -51,6 +51,7 @@ class CodeGenerationVisitor(ASTVisitor):
         self.symbol_table.enter_scope()
         self.current_scope_level += 1
         self.add_instruction(f"oframe", f"Start of block with {len(node.stmts)} statements")
+
         self.visit_all(node.stmts)
         self.add_instruction("cframe", "End of block")
         self.symbol_table.exit_scope()
@@ -61,7 +62,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_variable_declaration_node(self, node):
         identifier = node.identifier.lexeme
-        expr_value = self.visit(node.expr)
+        expr_value = node.expr.expr.factor.literal.value
         self.symbol_table.add(identifier, {
             'type': node.expr.Type,
             'level': self.current_scope_level,
@@ -89,6 +90,28 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_print_statement_node(self, node):
         expr_value = self.visit(node.expr)
+
+        # try:
+        #     # Attempt to convert expr_value to an int
+        #     int_value = int(expr_value)
+        #     self.add_instruction(f"push {int_value}", "Push integer value")
+        # except ValueError:
+        #     try:
+        #         # If int conversion fails, attempt to convert to a float
+        #         float_value = float(expr_value)
+        #         self.add_instruction(f"push {float_value}", "Push float value")
+        #     except ValueError:
+        #         # If float conversion fails, attempt to convert to a bool
+        #         if expr_value.lower() == 'true':
+        #             bool_value = 1
+        #             self.add_instruction(f"push {bool_value}", "Push boolean value (true)")
+        #         elif expr_value.lower() == 'false':
+        #             bool_value = 0
+        #             self.add_instruction(f"push {bool_value}", "Push boolean value (false)")
+        #         else:
+        #             # If all conversions fail, do nothing and just print the value as-is
+        #             pass
+
         self.add_instruction("print", "Print the value")
 
     def visit_delay_statement_node(self, node):
@@ -97,32 +120,36 @@ class CodeGenerationVisitor(ASTVisitor):
         self.add_instruction("delay", "Delay execution")
 
     def visit_write_statement_node(self, node):
-        for expr in node.expressions:
+        # Visit expressions in reverse order
+        for expr in reversed(node.expressions):
             expr_value = self.visit(expr)
             self.add_instruction(f"push {expr_value}", "Push value for write operation")
+
         if node.write_type == "write_box":
             self.add_instruction("writebox", "Write a box of pixels")
         elif node.write_type == "write":
             self.add_instruction("write", "Write a single pixel")
 
     def visit_if_statement_node(self, node):
-        self.visit(node.expression)
-        # self.add_instruction(f"push {expr_value}", "Evaluate condition for if statement")
-        # true_block_address = self.get_next_address() + 2
-        self.add_instruction(f"push #PC+{5}", "Push address of true block")
-        self.add_instruction(f"cjmp", "Conditional jump to true block if condition is true")
-        if node.block2:
-            self.add_instruction(f"push #PC+{7}", "Push address of true block")
-        else:
-            self.add_instruction(f"push #PC+{6}", "Push address of true block")
-        self.add_instruction(f"jmp", "aa")
+        expr_value = self.visit(node.expression)
+        cjmp_index = self.get_next_address()
+        self.add_instruction("push #PC+<true_block_address>", "Reserve address for true block")
+        self.add_instruction("cjmp", "Conditional jump to true block if condition is true")
+        jmp_index = self.get_next_address()
+        self.add_instruction("push #PC+<end_block_address>", "Reserve address for end block")
+        self.add_instruction("jmp", "Jump to end of if-else statement")
+        true_block_start = self.get_next_address()
         self.visit(node.block1)
+        true_block_end = self.get_next_address()
+        true_block_size = true_block_end - true_block_start
+        true_block_address = true_block_start - cjmp_index
+        self.instructions[cjmp_index] = f"push #PC+{true_block_address}"
+        end_block_address = true_block_end - jmp_index
+        self.instructions[jmp_index] = f"push #PC+{end_block_address}"
+
         if node.block2:
             self.visit(node.block2)
-            # end_if_address = self.get_next_address() + 1
-            # self.add_instruction(f"push #PC+1", "Push address of end if statement")
-            # self.add_instruction("jmp", "Jump to end if statement")
-            #
+            self.instructions[jmp_index] = f"push #PC+{true_block_size + 2}"
 
     def visit_for_statement_node(self, node):
         self.symbol_table.enter_scope()
@@ -182,10 +209,10 @@ class CodeGenerationVisitor(ASTVisitor):
         self.add_instruction("ret", "Return from function")
 
     def visit_expression_node(self, node):
+        if node.next_simple_expr:
+            self.visit(node.next_simple_expr)
         simple_expr1_value = self.visit(node.simple_expr1)
         if node.next_simple_expr:
-            next_simple_expr_value = self.visit(node.next_simple_expr)
-            self.add_instruction(f"push {next_simple_expr_value}", "Push second operand for relational operation")
             if node.relational_op == '<':
                 self.add_instruction("lt", "Perform less than operation")
             elif node.relational_op == '>':
@@ -198,7 +225,6 @@ class CodeGenerationVisitor(ASTVisitor):
                 self.add_instruction("le", "Perform less than or equal to operation")
             elif node.relational_op == '>=':
                 self.add_instruction("ge", "Perform greater than or equal to operation")
-        return simple_expr1_value
 
     def visit_simple_expression_node(self, node):
         term1_value = self.visit(node.term1)
@@ -238,12 +264,15 @@ class CodeGenerationVisitor(ASTVisitor):
         return 1 if node.value == 'true' else 0
 
     def visit_integer_literal_node(self, node):
+        self.add_instruction(f"push {node.value} ", "Pushed value of literal")
         return node.value
 
     def visit_float_literal_node(self, node):
+        self.add_instruction(f"push {node.value} ", "Pushed value of literal")
         return node.value
 
     def visit_colour_literal_node(self, node):
+        self.add_instruction(f"push {int(node.value[1:], 16)} ", "Pushed value of literal")
         return int(node.value[1:], 16) # Convert hex color to integer
 
     def visit_pad_width_literal_node(self, node):

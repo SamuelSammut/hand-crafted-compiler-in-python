@@ -1,11 +1,15 @@
-let x :int = 5;
-
-if (x == 6)
+let x:int = 5;
+let y:int =3;
+if (x > y)
 {
+    __print x;
     __print x;
     __print x;
 }
+
 else
 {
-    __print 3;
+    __print #056028;
+    __print 100;
+
 }
