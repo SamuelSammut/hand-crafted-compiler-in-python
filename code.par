@@ -1,4 +1,11 @@
 let x :int = 5;
-if (x == 5) {
+
+if (x == 6)
+{
     __print x;
+    __print x;
+}
+else
+{
+    __print 3;
 }

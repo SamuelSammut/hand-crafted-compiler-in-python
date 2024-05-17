@@ -31,7 +31,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def add_instruction(self, instruction, comment=''):
         if comment:
-            self.instructions.append(f"{instruction} ")#; {comment}")
+            self.instructions.append(f"{self.next_instruction_address}::   {instruction}")
         else:
             self.instructions.append(instruction)
         self.next_instruction_address += 1
@@ -50,7 +50,7 @@ class CodeGenerationVisitor(ASTVisitor):
     def visit_block_node(self, node):
         self.symbol_table.enter_scope()
         self.current_scope_level += 1
-        self.add_instruction(f"oframe {len(node.stmts)}", f"Start of block with {len(node.stmts)} statements")
+        self.add_instruction(f"oframe", f"Start of block with {len(node.stmts)} statements")
         self.visit_all(node.stmts)
         self.add_instruction("cframe", "End of block")
         self.symbol_table.exit_scope()
@@ -89,7 +89,6 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_print_statement_node(self, node):
         expr_value = self.visit(node.expr)
-        self.add_instruction(f"push {expr_value}", "Push value to be printed")
         self.add_instruction("print", "Print the value")
 
     def visit_delay_statement_node(self, node):
@@ -107,17 +106,23 @@ class CodeGenerationVisitor(ASTVisitor):
             self.add_instruction("write", "Write a single pixel")
 
     def visit_if_statement_node(self, node):
-        expr_value = self.visit(node.expression)
-        self.add_instruction(f"push {expr_value}", "Evaluate condition for if statement")
-        true_block_address = self.get_next_address() + 2
-        self.add_instruction(f"push #{true_block_address}", "Push address of true block")
-        self.add_instruction("cjmp", "Conditional jump to true block if condition is true")
+        self.visit(node.expression)
+        # self.add_instruction(f"push {expr_value}", "Evaluate condition for if statement")
+        # true_block_address = self.get_next_address() + 2
+        self.add_instruction(f"push #PC+{5}", "Push address of true block")
+        self.add_instruction(f"cjmp", "Conditional jump to true block if condition is true")
+        if node.block2:
+            self.add_instruction(f"push #PC+{7}", "Push address of true block")
+        else:
+            self.add_instruction(f"push #PC+{6}", "Push address of true block")
+        self.add_instruction(f"jmp", "aa")
         self.visit(node.block1)
         if node.block2:
-            end_if_address = self.get_next_address() + 1
-            self.add_instruction(f"push #{end_if_address}", "Push address of end if statement")
-            self.add_instruction("jmp", "Jump to end if statement")
             self.visit(node.block2)
+            # end_if_address = self.get_next_address() + 1
+            # self.add_instruction(f"push #PC+1", "Push address of end if statement")
+            # self.add_instruction("jmp", "Jump to end if statement")
+            #
 
     def visit_for_statement_node(self, node):
         self.symbol_table.enter_scope()
