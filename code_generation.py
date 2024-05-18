@@ -53,8 +53,8 @@ class CodeGenerationVisitor(ASTVisitor):
         self.symbol_table.exit_scope()
 
     def visit_block_node(self, node):
-        self.symbol_table.enter_scope()
         allvars = self.symbol_table.get_variables_in_current_scope()
+        self.symbol_table.enter_scope()
         self.current_scope_level += 1
         self.add_instruction(f"oframe", f"Start of block with {len(node.stmts)} statements")
         self.frame_opened = True
@@ -62,13 +62,20 @@ class CodeGenerationVisitor(ASTVisitor):
             self.symbol_table.add(var['identifier'], {
                 'type': var['type'],
                 'level': self.current_scope_level,
-                'index': var['index']
+                'index': len(self.symbol_table.scopes[-1])
             })
+
         self.visit_all(node.stmts)
         self.add_instruction("cframe", "End of block")
         self.frame_opened = False
-        self.symbol_table.exit_scope()
+        allvars = self.symbol_table.get_variables_in_current_scope()
         self.current_scope_level -= 1
+        for var in allvars:
+            self.symbol_table.add(var['identifier'], {
+                'type': var['type'],
+                'level': self.current_scope_level,
+                'index': len(self.symbol_table.scopes[-1])-1
+            })
 
     def visit_statement_node(self, node):
         self.visit(node.statement)
@@ -81,6 +88,7 @@ class CodeGenerationVisitor(ASTVisitor):
             'level': self.current_scope_level,
             'index': len(self.symbol_table.scopes[-1])
         })
+        aaa = self.symbol_table.lookup(identifier)
         index = self.symbol_table.scopes[-1][identifier]['index']
         self.add_instruction("push 1", f"Allocate space for {identifier}")
         if not self.frame_opened:
@@ -167,7 +175,7 @@ class CodeGenerationVisitor(ASTVisitor):
             false_block_end = self.get_next_address()
             false_block_size = false_block_end - false_block_start
             self.instructions[jmp_index] = f"push #PC+{true_block_size + 2}"
-            self.instructions[true_block_end - 2] = f"push #PC+{false_block_size + 1}"
+            self.instructions[true_block_end - 2] = f"push #PC+{false_block_size + 2}"
 
     def visit_for_statement_node(self, node):
         self.symbol_table.enter_scope()
@@ -229,7 +237,7 @@ class CodeGenerationVisitor(ASTVisitor):
     def visit_expression_node(self, node):
         if node.next_simple_expr:
             self.visit(node.next_simple_expr)
-        simple_expr1_value = self.visit(node.simple_expr1)
+        self.visit(node.simple_expr1)
         if node.next_simple_expr:
             if node.relational_op == '<':
                 self.add_instruction("lt", "Perform less than operation")
@@ -245,32 +253,28 @@ class CodeGenerationVisitor(ASTVisitor):
                 self.add_instruction("ge", "Perform greater than or equal to operation")
 
     def visit_simple_expression_node(self, node):
-        term1_value = self.visit(node.term1)
         if node.term2:
-            term2_value = self.visit(node.term2)
-            self.add_instruction(f"push {term1_value}", "Push first operand for additive operation")
-            self.add_instruction(f"push {term2_value}", "Push second operand for additive operation")
+            self.visit(node.term2)
+        self.visit(node.term1)
+        if node.term2:
             if node.additive_op == '+':
                 self.add_instruction("add", "Perform addition")
             elif node.additive_op == '-':
                 self.add_instruction("sub", "Perform subtraction")
             elif node.additive_op == 'or':
                 self.add_instruction("or", "Perform logical OR operation")
-        return term1_value
 
     def visit_term_node(self, node):
-        factor1_value = self.visit(node.factor1)
         if node.factor2:
-            factor2_value = self.visit(node.factor2)
-            self.add_instruction(f"push {factor1_value}", "Push first operand for multiplicative operation")
-            self.add_instruction(f"push {factor2_value}", "Push second operand for multiplicative operation")
+            self.visit(node.factor2)
+        self.visit(node.term1)
+        if node.factor2:
             if node.multiplicative_op == '*':
                 self.add_instruction("mul", "Perform multiplication")
             elif node.multiplicative_op == '/':
                 self.add_instruction("div", "Perform division")
             elif node.multiplicative_op == 'and':
                 self.add_instruction("and", "Perform logical AND operation")
-        return factor1_value
 
     def visit_factor_node(self, node):
         return self.visit(node.factor)
@@ -279,27 +283,22 @@ class CodeGenerationVisitor(ASTVisitor):
         return self.visit(node.literal)
 
     def visit_boolean_literal_node(self, node):
-        return 1 if node.value == 'true' else 0
+        self.add_instruction("push 1") if node.value == 'true' else self.add_instruction("push 0")
 
     def visit_integer_literal_node(self, node):
         self.add_instruction(f"push {node.value} ", "Pushed value of literal")
-        return node.value
 
     def visit_float_literal_node(self, node):
         self.add_instruction(f"push {node.value} ", "Pushed value of literal")
-        return node.value
 
     def visit_colour_literal_node(self, node):
         self.add_instruction(f"push {int(node.value[1:], 16)} ", "Pushed value of literal")
-        return int(node.value[1:], 16) # Convert hex color to integer
 
     def visit_pad_width_literal_node(self, node):
         self.add_instruction("width", "Push width of the PAD2000c display")
-        return "width"
 
     def visit_pad_height_literal_node(self, node):
         self.add_instruction("height", "Push height of the PAD2000c display")
-        return "height"
 
     def visit_padread_node(self, node):
         expr1_value = self.visit(node.expr1)
