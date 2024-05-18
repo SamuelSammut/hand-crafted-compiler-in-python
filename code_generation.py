@@ -11,6 +11,7 @@ class CodeGenerationVisitor(ASTVisitor):
         self.function_addresses = {}
         self.current_function = None
         self.next_instruction_address = 0
+        self.frame_opened = False
 
     def visit_all(self, nodes):
         for node in nodes:
@@ -43,17 +44,29 @@ class CodeGenerationVisitor(ASTVisitor):
         self.symbol_table.enter_scope()
         self.current_scope_level = 0
         self.add_instruction(".main", "Start of main program")
+        self.add_instruction(f"oframe")
+        self.frame_opened = True
         self.visit_all(node.stmts)
+        self.add_instruction(f"cframe")
+        self.frame_opened = False
         self.add_instruction("halt", "End of program")
         self.symbol_table.exit_scope()
 
     def visit_block_node(self, node):
         self.symbol_table.enter_scope()
+        allvars = self.symbol_table.get_variables_in_current_scope()
         self.current_scope_level += 1
         self.add_instruction(f"oframe", f"Start of block with {len(node.stmts)} statements")
-
+        self.frame_opened = True
+        for var in allvars:
+            self.symbol_table.add(var['identifier'], {
+                'type': var['type'],
+                'level': self.current_scope_level,
+                'index': var['index']
+            })
         self.visit_all(node.stmts)
         self.add_instruction("cframe", "End of block")
+        self.frame_opened = False
         self.symbol_table.exit_scope()
         self.current_scope_level -= 1
 
@@ -70,7 +83,7 @@ class CodeGenerationVisitor(ASTVisitor):
         })
         index = self.symbol_table.scopes[-1][identifier]['index']
         self.add_instruction("push 1", f"Allocate space for {identifier}")
-        if len(self.symbol_table.scopes[-1]) == 1:
+        if not self.frame_opened:
             self.add_instruction("oframe", "Create a new frame")
         else:
             self.add_instruction("alloc", "Allocate additional space in the current frame")
@@ -120,10 +133,8 @@ class CodeGenerationVisitor(ASTVisitor):
         self.add_instruction("delay", "Delay execution")
 
     def visit_write_statement_node(self, node):
-        # Visit expressions in reverse order
         for expr in reversed(node.expressions):
-            expr_value = self.visit(expr)
-            self.add_instruction(f"push {expr_value}", "Push value for write operation")
+            self.visit(expr)
 
         if node.write_type == "write_box":
             self.add_instruction("writebox", "Write a box of pixels")
@@ -140,16 +151,23 @@ class CodeGenerationVisitor(ASTVisitor):
         self.add_instruction("jmp", "Jump to end of if-else statement")
         true_block_start = self.get_next_address()
         self.visit(node.block1)
+        self.add_instruction("push #PC+<false_block_size>", "Reserve address ")
+        self.add_instruction("jmp", "Jump to end of if-else statement")
         true_block_end = self.get_next_address()
         true_block_size = true_block_end - true_block_start
         true_block_address = true_block_start - cjmp_index
+
         self.instructions[cjmp_index] = f"push #PC+{true_block_address}"
         end_block_address = true_block_end - jmp_index
         self.instructions[jmp_index] = f"push #PC+{end_block_address}"
 
         if node.block2:
+            false_block_start = self.get_next_address()
             self.visit(node.block2)
+            false_block_end = self.get_next_address()
+            false_block_size = false_block_end - false_block_start
             self.instructions[jmp_index] = f"push #PC+{true_block_size + 2}"
+            self.instructions[true_block_end - 2] = f"push #PC+{false_block_size + 1}"
 
     def visit_for_statement_node(self, node):
         self.symbol_table.enter_scope()

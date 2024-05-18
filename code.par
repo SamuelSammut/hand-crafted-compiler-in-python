@@ -1,15 +1,4 @@
-let x:int = 5;
-let y:int =3;
-if (x > y)
+for (let i:int = 1; i < 10; i = i+1)
 {
-    __print x;
-    __print x;
-    __print x;
-}
-
-else
-{
-    __print #056028;
-    __print 100;
-
+    __write
 }
