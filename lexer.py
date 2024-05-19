@@ -571,6 +571,14 @@ class Lexer:
         self.Tx[117][self.lexeme_list.index("e_letter")] = 118
         self.Tx[118][self.lexeme_list.index("_")] = 108
 
+        self.Tx[0][self.lexeme_list.index("_")] = 87
+        self.Tx[87][self.lexeme_list.index("_")] = 88
+        self.Tx[88][self.lexeme_list.index("p_letter")] = 89
+        self.Tx[89][self.lexeme_list.index("r_letter")] = 90
+        self.Tx[90][self.lexeme_list.index("i_letter")] = 91
+        self.Tx[91][self.lexeme_list.index("n_letter")] = 92
+        self.Tx[92][self.lexeme_list.index("t_letter")] = 93
+
         # Other keywords
 
         # Return

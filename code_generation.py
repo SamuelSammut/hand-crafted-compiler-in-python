@@ -30,11 +30,25 @@ class CodeGenerationVisitor(ASTVisitor):
     def generic_visit(self, node):
         raise Exception(f"No visit method for {node.name}")
 
-    def add_instruction(self, instruction, comment=''):
-        if comment:
-            self.instructions.append(f"{instruction}")
+    def add_instruction(self, instruction, comment='', show_address=False, show_comments=False):
+        if show_comments and show_address:
+            if comment:
+                self.instructions.append(f"{self.get_next_address() + 1}: {instruction} - {comment}")
+            else:
+                self.instructions.append(instruction)
+        elif show_address:
+            self.instructions.append(f"{self.get_next_address() + 1}: {instruction}")
+        elif show_comments:
+            if comment:
+                self.instructions.append(f"{instruction} - {comment}")
+            else:
+                self.instructions.append(instruction)
+
         else:
-            self.instructions.append(instruction)
+            if comment:
+                self.instructions.append(f"{instruction}")
+            else:
+                self.instructions.append(instruction)
         self.next_instruction_address += 1
 
     def get_next_address(self):
@@ -74,7 +88,7 @@ class CodeGenerationVisitor(ASTVisitor):
             self.symbol_table.add(var['identifier'], {
                 'type': var['type'],
                 'level': self.current_scope_level,
-                'index': len(self.symbol_table.scopes[-1])-1
+                'index': len(self.symbol_table.scopes[-1]) - 1
             })
 
     def visit_statement_node(self, node):
@@ -82,13 +96,25 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_variable_declaration_node(self, node):
         identifier = node.identifier.lexeme
-        expr_value = node.expr.expr.factor.literal.value
+
+        expr_value = None  # Initialize expr_value to handle cases where it's not set
+
+        # Check if node.expr and node.expr.expr and node.expr.expr.factor exist
+        if hasattr(node, 'expr') and hasattr(node.expr, 'expr') and hasattr(node.expr.expr, 'factor'):
+            factor = node.expr.expr.factor
+
+            # Check if factor has a literal attribute
+            if hasattr(factor, 'literal') and factor.literal is not None:
+                expr_value = factor.literal.value
+            elif hasattr(factor, 'actual_params'):
+                self.visit(factor.actual_params)
+
         self.symbol_table.add(identifier, {
             'type': node.expr.Type,
             'level': self.current_scope_level,
             'index': len(self.symbol_table.scopes[-1])
         })
-        aaa = self.symbol_table.lookup(identifier)
+        self.symbol_table.lookup(identifier)
         index = self.symbol_table.scopes[-1][identifier]['index']
         self.add_instruction("push 1", f"Allocate space for {identifier}")
         if not self.frame_opened:
@@ -102,37 +128,14 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_assignment_node(self, node):
         identifier = node.id.lexeme
-        expr_value = self.visit(node.expr)
+        self.visit(node.expr)
         var_info = self.symbol_table.lookup(identifier)
-        self.add_instruction(f"push {expr_value}", f"Push value to be assigned to {identifier}")
         self.add_instruction(f"push {var_info['index']}", f"Push index for {identifier}")
         self.add_instruction(f"push {var_info['level']}", f"Push scope level for {identifier}")
         self.add_instruction("st", f"Store value in {identifier}")
 
     def visit_print_statement_node(self, node):
-        expr_value = self.visit(node.expr)
-
-        # try:
-        #     # Attempt to convert expr_value to an int
-        #     int_value = int(expr_value)
-        #     self.add_instruction(f"push {int_value}", "Push integer value")
-        # except ValueError:
-        #     try:
-        #         # If int conversion fails, attempt to convert to a float
-        #         float_value = float(expr_value)
-        #         self.add_instruction(f"push {float_value}", "Push float value")
-        #     except ValueError:
-        #         # If float conversion fails, attempt to convert to a bool
-        #         if expr_value.lower() == 'true':
-        #             bool_value = 1
-        #             self.add_instruction(f"push {bool_value}", "Push boolean value (true)")
-        #         elif expr_value.lower() == 'false':
-        #             bool_value = 0
-        #             self.add_instruction(f"push {bool_value}", "Push boolean value (false)")
-        #         else:
-        #             # If all conversions fail, do nothing and just print the value as-is
-        #             pass
-
+        self.visit(node.expr)
         self.add_instruction("print", "Print the value")
 
     def visit_delay_statement_node(self, node):
@@ -150,7 +153,7 @@ class CodeGenerationVisitor(ASTVisitor):
             self.add_instruction("write", "Write a single pixel")
 
     def visit_if_statement_node(self, node):
-        expr_value = self.visit(node.expression)
+        self.visit(node.expression)
         cjmp_index = self.get_next_address()
         self.add_instruction("push #PC+<true_block_address>", "Reserve address for true block")
         self.add_instruction("cjmp", "Conditional jump to true block if condition is true")
@@ -159,7 +162,8 @@ class CodeGenerationVisitor(ASTVisitor):
         self.add_instruction("jmp", "Jump to end of if-else statement")
         true_block_start = self.get_next_address()
         self.visit(node.block1)
-        self.add_instruction("push #PC+<false_block_size>", "Reserve address ")
+        if node.block2:
+            self.add_instruction("push #PC+<false_block_size>", "Reserve address ")
         self.add_instruction("jmp", "Jump to end of if-else statement")
         true_block_end = self.get_next_address()
         true_block_size = true_block_end - true_block_start
@@ -178,47 +182,56 @@ class CodeGenerationVisitor(ASTVisitor):
             self.instructions[true_block_end - 2] = f"push #PC+{false_block_size + 2}"
 
     def visit_for_statement_node(self, node):
-        self.symbol_table.enter_scope()
-        self.current_scope_level += 1
         self.visit(node.variable_dec)
         loop_start_address = self.get_next_address()
-        expr_value = self.visit(node.expr)
-        self.add_instruction(f"push {expr_value}", "Evaluate loop condition")
-        loop_end_address = self.get_next_address() + 4
-        self.add_instruction(f"push #{loop_end_address}", "Push address of loop end")
-        self.add_instruction("cjmp", "Conditional jump to loop end if condition is false")
+        self.visit(node.expr)
+        self.add_instruction("push #PC+4", "Address to start of for loop block")
+        cjmp_index = self.get_next_address() + 1
+        self.add_instruction("cjmp", "Conditional jump to start of loop is condition is true")
+        self.add_instruction("push #PC+<loop_end_address>", "Reserve address for loop end")
+        self.add_instruction("jmp", "Unconditional jump to end of loop if condition is false")
         self.visit(node.block)
         self.visit(node.assign)
-        self.add_instruction(f"push #{loop_start_address}", "Jump to loop start")
+        self.add_instruction(f"push #PC{loop_start_address - self.get_next_address()}", "Jump back to loop start")
+        print("current address: ", self.get_next_address())
         self.add_instruction("jmp", "Jump to loop start")
-        self.add_instruction("cframe", "End of loop block")
-        self.symbol_table.exit_scope()
-        self.current_scope_level -= 1
+        loop_end_address = self.get_next_address()
+        self.instructions[cjmp_index] = f"push #PC+{loop_end_address - cjmp_index}"
 
     def visit_while_statement_node(self, node):
         loop_start_address = self.get_next_address()
-        expr_value = self.visit(node.expr)
-        self.add_instruction(f"push {expr_value}", "Evaluate while loop condition")
-        loop_end_address = self.get_next_address() + 3
-        self.add_instruction(f"push #{loop_end_address}", "Push address of loop end")
-        self.add_instruction("cjmp", "Conditional jump to loop end if condition is false")
+
+        self.visit(node.expr)
+        self.add_instruction("push #PC+4", "If condition is true, go to block.")
+        self.add_instruction("cjmp", "Conditional jump to start of block")
+
+        cjmp_index = self.get_next_address()
+        self.add_instruction("push #PC+<loop_end_address>", "Reserve address for loop end")
+        self.add_instruction("jmp", "Conditional jump to end of loop if condition is false")
+
         self.visit(node.block)
-        self.add_instruction(f"push #{loop_start_address}", "Jump to loop start")
+
+        self.add_instruction(f"push #PC-{(self.get_next_address() - loop_start_address) }", "Jump back to loop start")
         self.add_instruction("jmp", "Jump to loop start")
+
+        # End of the loop
+        loop_end_address = self.get_next_address()
+        self.instructions[cjmp_index] = f"push #PC+{loop_end_address - cjmp_index}"
 
     def visit_function_declaration_node(self, node):
         identifier = node.identifier.lexeme
         self.function_addresses[identifier] = self.get_next_address()
-        self.symbol_table.add(identifier, {
-            'type': node.Type.value,
-            'level': self.current_scope_level,
-            'index': len(self.symbol_table.scopes[-1])
-        })
+
+        # self.symbol_table.add(identifier, {
+        #     'type': node.Type.value,
+        #     'level': self.current_scope_level,
+        #     'index': len(self.symbol_table.scopes[-1])
+        # })
         self.add_instruction(f".{identifier}")
+        self.visit(node.formalParams)
         self.symbol_table.enter_scope()
         self.current_scope_level += 1
         self.visit(node.block)
-        self.add_instruction("ret")
         self.symbol_table.exit_scope()
         self.current_scope_level -= 1
 
@@ -230,8 +243,7 @@ class CodeGenerationVisitor(ASTVisitor):
         self.add_instruction(f"call #{self.function_addresses[identifier]}", f"Call function {identifier}")
 
     def visit_return_statement_node(self, node):
-        expr_value = self.visit(node.expr)
-        self.add_instruction(f"push {expr_value}", "Push return value")
+        self.visit(node.expr)
         self.add_instruction("ret", "Return from function")
 
     def visit_expression_node(self, node):
@@ -267,7 +279,7 @@ class CodeGenerationVisitor(ASTVisitor):
     def visit_term_node(self, node):
         if node.factor2:
             self.visit(node.factor2)
-        self.visit(node.term1)
+        self.visit(node.factor1)
         if node.factor2:
             if node.multiplicative_op == '*':
                 self.add_instruction("mul", "Perform multiplication")
@@ -337,11 +349,29 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_formal_parameter_node(self, node):
         identifier = node.identifier.lexeme
+        if node.Type.value == 'int' or node.Type.value == 'float':
+            value = 0
+        elif node.Type.value == 'bool':
+            value = 'false'
+        elif node.Type.value == 'colour':
+            value = '#000000'
         self.symbol_table.add(identifier, {
             'type': node.Type.value,
             'level': self.current_scope_level,
             'index': len(self.symbol_table.scopes[-1])
         })
+        self.symbol_table.lookup(identifier)
+        index = self.symbol_table.scopes[-1][identifier]['index']
+        self.add_instruction("push 1", f"Allocate space for {identifier}")
+        if not self.frame_opened:
+            self.add_instruction("oframe", "Create a new frame")
+        else:
+            self.add_instruction("alloc", "Allocate additional space in the current frame")
+        self.add_instruction(f"push {value}", f"Push initial value of {identifier}")
+        self.add_instruction(f"push {index}", f"Push index for {identifier}")
+        self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
+        self.add_instruction("st", f"Store {identifier} in current frame")
+
 
     def visit_formal_params(self, node):
         for param in node.formal_params:
@@ -357,4 +387,3 @@ class CodeGenerationVisitor(ASTVisitor):
 
         # Assuming we need to return the value for further usage in the variable declaration
         return expr_value
-

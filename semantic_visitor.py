@@ -60,7 +60,7 @@ class SemanticVisitor(ASTVisitor):
     def visit_variable_declaration_suffix_node(self, node):
         expr_type = self.visit(node.expr)
 
-        if node.Type.value != expr_type:
+        if node.Type.value != expr_type and not (node.Type.value == "float" and expr_type == "int"):
             raise Exception(
                 f"Type mismatch: declared type '{node.Type.value}' does not match expression type '{expr_type}'")
 
@@ -72,7 +72,7 @@ class SemanticVisitor(ASTVisitor):
         assigned_type = self.visit(node.expr)
         declared_type = self.symbol_table.lookup(identifier)
 
-        if assigned_type != declared_type:
+        if assigned_type != declared_type and not (declared_type == "float" and assigned_type == "int"):
             raise Exception(
                 f"Type mismatch: cannot assign type '{assigned_type}' to variable '{identifier}' of type '{declared_type}'")
 
@@ -84,7 +84,10 @@ class SemanticVisitor(ASTVisitor):
         if node.factor2:
             factor2_type = self.visit(node.factor2)
             if term_type != factor2_type:
-                raise Exception(f"Type mismatch in term: '{term_type}' and '{factor2_type}'")
+                if (term_type == "int" and factor2_type == "float") or (term_type == "float" and factor2_type == "int"):
+                    term_type = "float"
+                else:
+                    raise Exception(f"Type mismatch in term: '{term_type}' and '{factor2_type}'")
         return term_type
 
     def visit_sub_expression_node(self, node):
@@ -96,7 +99,10 @@ class SemanticVisitor(ASTVisitor):
         if node.term2:
             term2_type = self.visit(node.term2)
             if simple_expr_type != term2_type:
-                raise Exception(f"Type mismatch in simple expression: '{simple_expr_type}' and '{term2_type}'")
+                if (simple_expr_type == "int" and term2_type == "float") or (simple_expr_type == "float" and term2_type == "int"):
+                    simple_expr_type = "float"
+                else:
+                    raise Exception(f"Type mismatch in simple expression: '{simple_expr_type}' and '{term2_type}'")
         return simple_expr_type
 
     def visit_expression_node(self, node):
@@ -104,7 +110,10 @@ class SemanticVisitor(ASTVisitor):
         if node.next_simple_expr:
             next_expr_type = self.visit(node.next_simple_expr)
             if expr_type != next_expr_type:
-                raise Exception(f"Type mismatch in expression: '{expr_type}' and '{next_expr_type}'")
+                if (expr_type == "int" and next_expr_type == "float") or (expr_type == "float" and next_expr_type == "int"):
+                    expr_type = "float"
+                else:
+                    raise Exception(f"Type mismatch in expression: '{expr_type}' and '{next_expr_type}'")
 
             if node.relational_op:
                 expr_type = "bool"
@@ -156,6 +165,7 @@ class SemanticVisitor(ASTVisitor):
         if node.formalParams:
             for param in node.formalParams.formal_params:
                 self.visit_formal_parameter_node(param)
+                # self.symbol_table.add(param.identifier.lexeme, param.Type.value)
 
         # Track if we have a return statement on all paths
         all_paths_return = self.check_all_paths_return(node.block.stmts)
@@ -163,7 +173,8 @@ class SemanticVisitor(ASTVisitor):
         if not all_paths_return:
             raise Exception(f"Function '{identifier}' is missing a return statement on some execution paths")
 
-        self.symbol_table.exit_scope()
+        self.visit(node.block)
+        # self.symbol_table.exit_scope()
         self.current_function_type = None
 
     def visit_function_call_node(self, node):
