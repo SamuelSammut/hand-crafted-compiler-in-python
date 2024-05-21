@@ -12,6 +12,8 @@ class CodeGenerationVisitor(ASTVisitor):
         self.current_function = None
         self.next_instruction_address = 0
         self.frame_opened = False
+        self.function_instructions = []
+
 
     def visit_all(self, nodes):
         for node in nodes:
@@ -96,35 +98,83 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_variable_declaration_node(self, node):
         identifier = node.identifier.lexeme
-
-        expr_value = None  # Initialize expr_value to handle cases where it's not set
-
-        # Check if node.expr and node.expr.expr and node.expr.expr.factor exist
+        expr_value = None
+        calling_saved_parameters = []
+        parameter_created_identifiers = []
+        P1 = []
+        P2 = []
+        final_p = []
         if hasattr(node, 'expr') and hasattr(node.expr, 'expr') and hasattr(node.expr.expr, 'factor'):
             factor = node.expr.expr.factor
+            if hasattr(factor, 'actual_params'):
+                count = 0
 
-            # Check if factor has a literal attribute
-            if hasattr(factor, 'literal') and factor.literal is not None:
+                for params in factor.actual_params.actual_params:
+                    function_identifier = factor.identifier.lexeme
+                    if hasattr(params, "factor") and hasattr(params.factor, "lexeme"):
+                        count = count+1
+                        var_info = self.symbol_table.lookup(params.factor.lexeme)
+
+                        calling_saved_parameters.append(f"push [{var_info['index']}:{var_info['level']}]")
+                        P1.append((f"push [{var_info['index']}:{var_info['level']}]", count))
+
+                    elif hasattr(params, "factor") and hasattr(params.factor, "literal"):
+                        count = count + 1
+                        identifier = function_identifier + str(count)
+                        parameter_created_identifiers.append(identifier)
+                        P2.append((identifier, count))
+                        expr_value = params.factor.literal.value
+                        self.symbol_table.add(identifier, {
+                            'type': params.factor.name,
+                            'level': self.current_scope_level,
+                            'index': len(self.symbol_table.scopes[-1])
+                        })
+                        self.symbol_table.lookup(identifier)
+                        index = self.symbol_table.scopes[-1][identifier]['index']
+                        self.add_instruction("push 1", f"Allocate space for {identifier}")
+                        if not self.frame_opened:
+                            self.add_instruction("oframe", "Create a new frame")
+                        else:
+                            self.add_instruction("alloc", "Allocate additional space in the current frame")
+                        self.add_instruction(f"push {expr_value}", f"Push initial value of {identifier}")
+                        self.add_instruction(f"push {index}", f"Push index for {identifier}")
+                        self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
+                        self.add_instruction("st", f"Store {identifier} in current frame")
+
+                final_p = P1+P2
+                sor = sorted(final_p, key = lambda x:x[1])
+
+                for s in sor:
+                    if s[0].__contains__(function_identifier):
+                        var_info = self.symbol_table.lookup(s[0])
+                        self.add_instruction(f"push [{var_info['index']}:{var_info['level']}]")
+                    else:
+                        self.add_instruction(s[0])
+
+                self.add_instruction("push 0")
+                self.add_instruction(f".{function_identifier}")
+                self.add_instruction("call")
+
+
+            elif hasattr(factor, 'literal') and factor.literal is not None:
                 expr_value = factor.literal.value
-            elif hasattr(factor, 'actual_params'):
-                self.visit(factor.actual_params)
 
-        self.symbol_table.add(identifier, {
-            'type': node.expr.Type,
-            'level': self.current_scope_level,
-            'index': len(self.symbol_table.scopes[-1])
-        })
-        self.symbol_table.lookup(identifier)
-        index = self.symbol_table.scopes[-1][identifier]['index']
-        self.add_instruction("push 1", f"Allocate space for {identifier}")
-        if not self.frame_opened:
-            self.add_instruction("oframe", "Create a new frame")
-        else:
-            self.add_instruction("alloc", "Allocate additional space in the current frame")
-        self.add_instruction(f"push {expr_value}", f"Push initial value of {identifier}")
-        self.add_instruction(f"push {index}", f"Push index for {identifier}")
-        self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
-        self.add_instruction("st", f"Store {identifier} in current frame")
+                self.symbol_table.add(identifier, {
+                    'type': node.expr.Type,
+                    'level': self.current_scope_level,
+                    'index': len(self.symbol_table.scopes[-1])
+                })
+                self.symbol_table.lookup(identifier)
+                index = self.symbol_table.scopes[-1][identifier]['index']
+                self.add_instruction("push 1", f"Allocate space for {identifier}")
+                if not self.frame_opened:
+                    self.add_instruction("oframe", "Create a new frame")
+                else:
+                    self.add_instruction("alloc", "Allocate additional space in the current frame")
+                self.add_instruction(f"push {expr_value}", f"Push initial value of {identifier}")
+                self.add_instruction(f"push {index}", f"Push index for {identifier}")
+                self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
+                self.add_instruction("st", f"Store {identifier} in current frame")
 
     def visit_assignment_node(self, node):
         identifier = node.id.lexeme
@@ -345,7 +395,8 @@ class CodeGenerationVisitor(ASTVisitor):
         return node.lexeme
 
     def visit_actual_params_node(self, node):
-        return [self.visit(param) for param in node.actual_params]
+        for param in node.actual_params:
+            return param.factor.literal.value
 
     def visit_formal_parameter_node(self, node):
         identifier = node.identifier.lexeme
