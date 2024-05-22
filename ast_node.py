@@ -25,12 +25,13 @@ class ASTProgramNode():
 
 
 class ASTExpressionNode():
-    def __init__(self, simple_expr1, relational_op = None, next_simple_expr=None, Type=None):
+    def __init__(self, simple_expr1, relational_op=None, next_simple_expr=None, Type=None):
         self.name = "ASTExpression_Node"
         self.simple_expr1 = simple_expr1
         self.relational_op = relational_op
         self.next_simple_expr = next_simple_expr
         self.Type = Type
+
     def accept(self, visitor):
         visitor.visit_expression_node(self)
 
@@ -144,7 +145,6 @@ class ASTFunctionCallNode():
 
     def accept(self, visitor):
         visitor.visit_function_call_node(self)
-
 
 
 class ASTIdentifierNode():

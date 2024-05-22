@@ -1,9 +1,6 @@
-fun addone(x:int, y:int) -> int
-{
 
-    x = x + y;
-    return x;
-}
+    __write 15, 15, #000000;
 
-let z:int = addone(5, 5);
-__print y;
+let x:int = 0;
+x = __height;
+__print x;

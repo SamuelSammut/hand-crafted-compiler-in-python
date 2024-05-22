@@ -18,7 +18,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_all(self, nodes):
         for node in nodes:
-                self.visit(node)
+            self.visit(node)
 
     def generate(self, node):
         self.visit(node)
@@ -164,7 +164,6 @@ class CodeGenerationVisitor(ASTVisitor):
                 self.add_instruction("call")
                 self.coming_from_function_call = True
 
-
             elif hasattr(factor, 'literal') and factor.literal is not None:
                 expr_value = factor.literal.value
 
@@ -185,7 +184,6 @@ class CodeGenerationVisitor(ASTVisitor):
                 self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {initial_identifier}")
                 self.add_instruction("st", f"Store {initial_identifier} in current frame")
 
-
     def visit_assignment_node(self, node):
         identifier = node.id.lexeme
         try:
@@ -195,7 +193,6 @@ class CodeGenerationVisitor(ASTVisitor):
         if paramCheck is not None:
             param_info = self.symbol_table.lookupParameters(node.id.lexeme)
             self.visit(node.expr)
-            # var_info = self.symbol_table.lookup(identifier)
             self.add_instruction(f"push {param_info['index']}", f"Push index for {identifier}")
             self.add_instruction(f"push {param_info['level']}", f"Push scope level for {identifier}")
             self.add_instruction("st", f"Store value in {identifier}")
@@ -203,21 +200,19 @@ class CodeGenerationVisitor(ASTVisitor):
         else:
             var_info = self.symbol_table.lookup(node.id.lexeme)
             self.visit(node.expr)
-            # var_info = self.symbol_table.lookup(identifier)
             self.add_instruction(f"push {var_info['index']}", f"Push index for {identifier}")
             self.add_instruction(f"push {var_info['level']}", f"Push scope level for {identifier}")
             self.add_instruction("st", f"Store value in {identifier}")
 
     def visit_print_statement_node(self, node):
-        if self.coming_from_function_call == False:
+        if not self.coming_from_function_call:
             self.visit(node.expr)
             self.add_instruction("print", "Print the value")
-        elif self.coming_from_function_call == True:
+        elif self.coming_from_function_call:
             self.add_instruction("print", "Print the value")
 
     def visit_delay_statement_node(self, node):
-        expr_value = self.visit(node.expr)
-        self.add_instruction(f"push {expr_value}", "Push delay time")
+        self.visit(node.expr)
         self.add_instruction("delay", "Delay execution")
 
     def visit_write_statement_node(self, node):
@@ -291,7 +286,6 @@ class CodeGenerationVisitor(ASTVisitor):
         self.add_instruction(f"push #PC-{(self.get_next_address() - loop_start_address)}", "Jump back to loop start")
         self.add_instruction("jmp", "Jump to loop start")
 
-        # End of the loop
         loop_end_address = self.get_next_address()
         self.instructions[cjmp_index] = f"push #PC+{loop_end_address - cjmp_index}"
 
@@ -309,31 +303,17 @@ class CodeGenerationVisitor(ASTVisitor):
 
         formal_parameters_scope = self.symbol_table.formal_parameters_scope
         for p in reversed(range(param_count)):
-            # Assuming you have a way to get the parameter name based on 'p'
-            # For instance, if param_count represents the count of parameters
             param_name = list(formal_parameters_scope[0].keys())[p]
-
-            # Extract the index value for the parameter
             index = formal_parameters_scope[0][param_name]['index']
             scope = self.current_scope_level
-
-            # Adding instructions to function_instructions list
             function_instructions.append(f"push {index}")
             function_instructions.append(f"push {scope}")
             function_instructions.append("st")
         self.visit_block_node(node=node.block, coming_from_function_call=True)
         self.instructions = old_instructions
-
         self.function_instructions.extend(function_instructions)
         self.current_scope_level -= 1
         self.coming_from_function_call = True
-
-    # def visit_function_call_node(self, node):
-    #     identifier = node.identifier.lexeme
-    #     for param in node.actual_params.actual_params:
-    #         param_value = self.visit(param)
-    #         self.add_instruction(f"push {param_value}", f"Push parameter {param.lexeme} for function {identifier}")
-    #     self.add_instruction(f"call #{self.function_addresses[identifier]}", f"Call function {identifier}")
 
     def visit_return_statement_node(self, node):
         self.visit(node.expr)
@@ -406,18 +386,13 @@ class CodeGenerationVisitor(ASTVisitor):
         self.add_instruction("height", "Push height of the PAD2000c display")
 
     def visit_padread_node(self, node):
-        expr1_value = self.visit(node.expr1)
-        expr2_value = self.visit(node.expr2)
-        self.add_instruction(f"push {expr1_value}", "Push x-coordinate for pad read")
-        self.add_instruction(f"push {expr2_value}", "Push y-coordinate for pad read")
-        self.add_instruction("push [0:0]", "Perform pad read")
-        return "padread"
+        self.visit(node.expr1)
+        self.visit(node.expr2)
+        self.add_instruction("read")
 
     def visit_padrandi_node(self, node):
-        expr_value = self.visit(node.expr)
-        self.add_instruction(f"push {expr_value}", "Push maximum value for random integer generation")
+        self.visit(node.expr)
         self.add_instruction("irnd", "Generate random integer")
-        return "padrandi"
 
     def visit_sub_expression_node(self, node):
         return self.visit(node.expr)
@@ -445,8 +420,6 @@ class CodeGenerationVisitor(ASTVisitor):
             var_info = self.symbol_table.lookup(node.lexeme)
             self.add_instruction(f"push [{var_info['index']}:{var_info['level']}]",
                                  f"Push value of variable {node.lexeme}")
-
-        # self.add_instruction(f"push [{var_info['index']}:{var_info['level']}]", f"Push value of variable {node.lexeme}")
         return node.lexeme
 
     def visit_actual_params_node(self, node):
@@ -461,43 +434,13 @@ class CodeGenerationVisitor(ASTVisitor):
             'index': len(self.symbol_table.formal_parameters_scope[-1])
         })
 
-    # def visit_formal_parameter_node(self, node):
-    #     pass
-    # identifier = node.identifier.lexeme
-    # # if node.Type.value == 'int' or node.Type.value == 'float':
-    # #     value = 0
-    # # elif node.Type.value == 'bool':
-    # #     value = 'false'
-    # # elif node.Type.value == 'colour':
-    # #     value = '#000000'
-    # self.symbol_table.add(identifier, {
-    #     'type': node.Type.value,
-    #     'level': self.current_scope_level,
-    #     'index': len(self.symbol_table.scopes[-1])
-    # })
-    # self.symbol_table.lookup(identifier)
-    # index = self.symbol_table.scopes[-1][identifier]['index']
-    # self.add_instruction("push 1", f"Allocate space for {identifier}")
-    # if not self.frame_opened:
-    #     self.add_instruction("oframe", "Create a new frame")
-    # else:
-    #     self.add_instruction("alloc", "Allocate additional space in the current frame")
-    # self.add_instruction(f"push {value}", f"Push initial value of {identifier}")
-    # self.add_instruction(f"push {index}", f"Push index for {identifier}")
-    # self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
-    # self.add_instruction("st", f"Store {identifier} in current frame")
-
     def visit_formal_params(self, node):
         for param in node.formal_params:
             self.visit(param)
 
     def visit_type_node(self, node):
-        # Type nodes do not generate any specific instructions, they just carry type information
         return node.value
 
     def visit_variable_declaration_suffix_node(self, node):
         expr_value = self.visit(node.expr)
-        declared_type = self.visit(node.Type)
-
-        # Assuming we need to return the value for further usage in the variable declaration
         return expr_value

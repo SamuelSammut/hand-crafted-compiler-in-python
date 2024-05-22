@@ -74,7 +74,7 @@ class Parser:
             print("Pad Height Literal Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
         elif self.crtToken.type == lex.TokenType.PAD_READ:
             literal = self.ParsePadRead()
-            self.NextToken()
+            # self.NextToken()
 
         return ast.ASTLiteralNode(literal)
 
@@ -142,50 +142,6 @@ class Parser:
 
         return simpleExpr1
 
-    # def ParseExpression(self):
-    #     simpleExpr1 = self.ParseSimpleExpression()
-    #     if simpleExpr1 is None:
-    #         raise Exception("First factor in term is null.")
-    #     relational_op = None
-    #     simpleExpr2 = None
-    #
-    #     while self.crtToken.type == lex.TokenType.RELATIONAL_OPERAND:
-    #         relational_op = self.crtToken.lexeme
-    #         if relational_op is None:
-    #             raise Exception("Multiplicative operator expected")
-    #         self.NextToken()
-    #
-    #         next_simple_expr = self.ParseSimpleExpression()
-    #
-    #         simpleExpr1 = ast.ASTExpressionNode(simpleExpr1, relational_op, next_simple_expr)
-    #
-    #     return simpleExpr1
-
-    # def ParseExpression(self):
-    #     simpleExpressions = []
-    #     simpleExpression1 = self.ParseSimpleExpression()
-    #     if simpleExpression1 is None:
-    #         raise Exception("Expected a simple expression to start parsing an expression")
-    #     simpleExpressions.append(simpleExpression1)
-    #     while self.crtToken.type == lex.TokenType.RELATIONAL_OPERAND:
-    #         self.NextToken()
-    #         simpleExpressionN = self.ParseSimpleExpression()
-    #         if simpleExpressionN is None:
-    #             raise Exception("No simple expression following relational operand in expression parsing.")
-    #         simpleExpressions.append(simpleExpressionN)
-    #         # self.NextToken()
-    #     if self.crtToken.type == lex.TokenType.AS:
-    #         self.NextToken()
-    #         if self.crtToken.type == lex.TokenType.TYPE:
-    #             Type = ast.ASTTypeNode(self.crtToken.lexeme)
-    #             self.NextToken()
-    #             if Type is None:
-    #                 raise Exception("Expected 'AS' keyword and Type after simple expression.")
-    #             else:
-    #                 return ast.ASTExpressionNode(simpleExpressions, Type)
-    #     else:
-    #         return ast.ASTExpressionNode(simpleExpressions)
-
     def ParsePadRead(self):
         if self.crtToken.type == lex.TokenType.PAD_READ:
             self.NextToken()
@@ -250,15 +206,28 @@ class Parser:
             factor = self.ParseUnary()
         elif self.crtToken.type == lex.TokenType.RANDOM_INT:
             factor = self.ParsePadRandI()
+        elif self.crtToken.type == lex.TokenType.PAD_WIDTH:
+            factor = self.ParsePadWidth()
+        elif self.crtToken.type == lex.TokenType.PAD_HEIGHT:
+            factor = self.ParsePadHeight()
+        elif self.crtToken.type == lex.TokenType.PAD_READ:
+            factor = self.ParsePadRead()
         elif self.crtToken.type == lex.TokenType.IDENTIFIER:
             if self.nextToken.type == lex.TokenType.LEFT_ROUND_BRACKET:
                 factor = self.ParseFunctionCall()
             else:
                 factor = ast.ASTIdentifierNode(self.crtToken.lexeme)
-                self.NextToken()  # Consume the current token
+                self.NextToken()
                 print("Variable Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
         return ast.ASTFactorNode(factor)
 
+    def ParsePadWidth(self):
+        if self.crtToken.type == lex.TokenType.PAD_WIDTH:
+            return ast.ASTPadWidthLiteralNode(self.crtToken.lexeme)
+
+    def ParsePadHeight(self):
+        if self.crtToken.type == lex.TokenType.PAD_HEIGHT:
+            return ast.ASTPadHeightLiteralNode(self.crtToken.lexeme)
     def ParseAssignment(self):
         if self.crtToken.type == lex.TokenType.IDENTIFIER:
             assignment_lhs = ast.ASTIdentifierNode(self.crtToken.lexeme)
@@ -791,15 +760,3 @@ class Parser:
     def Parse(self):
         self.ASTroot = self.ParseProgram()
 
-# parser = Parser("let x: int = 10;"
-#                 "let y: float = 3.14;"
-#                 "let z: bool = true;"
-#                 "let c: colour = #FF00FF;"
-#                 "x = 20;"
-#                 "y = 6.28;"
-#                 "z = false;"
-#                 "c = #00FF00;")
-# parser.Parse()
-#
-#
-# parser.ASTroot.accept(PrintNodesVisitor())
