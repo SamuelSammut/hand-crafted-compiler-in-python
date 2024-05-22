@@ -178,6 +178,24 @@ class PrintNodesVisitor(ASTVisitor):
         if expression_node.Type is not None:
             print('\t' * self.tab_count, "Expression Type::", expression_node.Type)
 
+    def visit_variable_decl_array_node(self, node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Array Declaration node => ")
+        self.inc_tab_count()
+        if node.size:
+            print('\t' * self.tab_count, f"Array size => {node.size}")
+        for literal in node.literals:
+            literal.accept(self)
+        self.dec_tab_count()
+
+    def visit_array_access_node(self, node):
+        self.node_count += 1
+        print('\t' * self.tab_count, "Array Access node => ")
+        self.inc_tab_count()
+        node.identifier.accept(self)
+        node.index_expr.accept(self)
+        self.dec_tab_count()
+
     def visit_variable_declaration_suffix_node(self, variable_declaration_suffix_node):
         self.node_count += 1
         # print('\t' * self.tab_count, "Variable declaration suffix node => ")
@@ -186,15 +204,21 @@ class PrintNodesVisitor(ASTVisitor):
         variable_declaration_suffix_node.expr.accept(self)
         self.dec_tab_count()
 
+    # def visit_variable_declaration_node(self, variable_declaration_node):
+    #     self.node_count += 1
+    #     print('\t' * self.tab_count, "Variable declaration node => ")
+    #     self.inc_tab_count()
+    #     variable_declaration_node.identifier.accept(self)
+    #     variable_declaration_node.expr.accept(self)
+    #     self.dec_tab_count()
+
     def visit_variable_declaration_node(self, variable_declaration_node):
         self.node_count += 1
         print('\t' * self.tab_count, "Variable declaration node => ")
         self.inc_tab_count()
         variable_declaration_node.identifier.accept(self)
-
-        ##idetnfier put in symbol table  take type
-        # chec if already in scope, if already in throw expceiont else put in symbol table in the current scope
-        variable_declaration_node.expr.accept(self)
+        if variable_declaration_node.suffix is not None:
+            variable_declaration_node.suffix.accept(self)
         self.dec_tab_count()
 
     def visit_if_statement_node(self, if_statement_node):

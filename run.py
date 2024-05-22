@@ -19,12 +19,12 @@ code_generation = CodeGenerationVisitor()
 parser.ASTroot.accept(print_ast)
 parser.ASTroot.accept(semantic_visitor)
 
-generated = code_generation.generate(parser.ASTroot)
-
-print("GENERATED CODE:")
-print(generated)
-
-print("Semantic analysis completed successfully!")
-
+# generated = code_generation.generate(parser.ASTroot)
+#
+# print("GENERATED CODE:")
+# print(generated)
+#
+# print("Semantic analysis completed successfully!")
+#
 
 

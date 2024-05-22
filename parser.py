@@ -1,6 +1,7 @@
-
 import ast_node as ast
 import lexer as lex
+
+
 # from print_ast_visitor import PrintNodesVisitor
 
 class Parser:
@@ -216,8 +217,7 @@ class Parser:
             if self.nextToken.type == lex.TokenType.LEFT_ROUND_BRACKET:
                 factor = self.ParseFunctionCall()
             else:
-                factor = ast.ASTIdentifierNode(self.crtToken.lexeme)
-                self.NextToken()
+                factor = self.ParseIdentifier()
                 print("Variable Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
         return ast.ASTFactorNode(factor)
 
@@ -228,6 +228,7 @@ class Parser:
     def ParsePadHeight(self):
         if self.crtToken.type == lex.TokenType.PAD_HEIGHT:
             return ast.ASTPadHeightLiteralNode(self.crtToken.lexeme)
+
     def ParseAssignment(self):
         if self.crtToken.type == lex.TokenType.IDENTIFIER:
             assignment_lhs = ast.ASTIdentifierNode(self.crtToken.lexeme)
@@ -296,28 +297,117 @@ class Parser:
 
         return term1
 
+    def ParseVariableDeclArray(self):
+        if self.crtToken.type == lex.TokenType.INTEGER_LITERAL:
+            size = self.crtToken.lexeme
+            self.NextToken()
+            if self.crtToken.type == lex.TokenType.RIGHT_SQUARE_BRACKET:
+                self.NextToken()
+                if self.crtToken.type == lex.TokenType.EQUALS:
+                    self.NextToken()
+                    if self.crtToken.type == lex.TokenType.LEFT_SQUARE_BRACKET:
+                        self.NextToken()
+                        literals = [self.ParseLiteral()]
+                        while self.crtToken.type == lex.TokenType.COMMA:
+                            self.NextToken()
+                            literals.append(self.ParseLiteral())
+                        if self.crtToken.type == lex.TokenType.RIGHT_SQUARE_BRACKET:
+                            self.NextToken()
+                            return ast.ASTVariableDeclArrayNode(self.arrayType, size, literals)
+                        else:
+                            raise Exception("Expected closing square bracket ']' after array literals.")
+                    else:
+                        raise Exception("Expected opening square bracket '[' after equals sign.")
+            else:
+                raise Exception("Expected closing square bracket ']' after integer literal.")
+        else:
+            if self.crtToken.type == lex.TokenType.RIGHT_SQUARE_BRACKET:
+                self.NextToken()
+                if self.crtToken.type == lex.TokenType.EQUALS:
+                    self.NextToken()
+                    if self.crtToken.type == lex.TokenType.LEFT_SQUARE_BRACKET:
+                        self.NextToken()
+                        literals = [self.ParseLiteral()]
+                        while self.crtToken.type == lex.TokenType.COMMA:
+                            self.NextToken()
+                            literals.append(self.ParseLiteral())
+                        if self.crtToken.type == lex.TokenType.RIGHT_SQUARE_BRACKET:
+                            self.NextToken()
+                            return ast.ASTVariableDeclArrayNode(self.arrayType, None, literals)
+                        else:
+                            raise Exception("Expected closing square bracket ']' after array literals.")
+                    else:
+                        raise Exception("Expected opening square bracket '[' after equals sign.")
+            else:
+                raise Exception("Expected closing square bracket ']' after left square bracket.")
+
     def ParseVariableDeclarationSuffix(self):
         if self.crtToken.type == lex.TokenType.COLON:
             self.NextToken()
             if self.crtToken.type == lex.TokenType.TYPE:
                 Type = ast.ASTTypeNode(self.crtToken.lexeme)
                 self.NextToken()
-                if Type is None:
-                    raise Exception("Expected type to not be null after colon in variable declaration suffix.")
+                self.arrayType = Type  # Set the arrayType for later use
                 if self.crtToken.type == lex.TokenType.EQUALS:
                     self.NextToken()
                     expression = self.ParseExpression()
                     if expression is None:
                         raise Exception("Expected expression to not be null in Variable Declaration suffix.")
-                    else:
-                        return ast.ASTVariableDeclarationSuffixNode(Type, expression)
+                    return ast.ASTVariableDeclarationSuffixNode(Type, expression)
+                elif self.crtToken.type == lex.TokenType.LEFT_SQUARE_BRACKET:
+                    self.NextToken()
+                    return self.ParseVariableDeclArray()
                 else:
-                    raise Exception("Expected equal sign after type in variable declaration suffix.")
-
+                    raise Exception("Expected Variable Declaration Suffix to start with colon or left square bracket.")
             else:
                 raise Exception("Expected type to follow colon in variable declaration suffix.")
         else:
-            raise Exception("Expected Variable Declaration Suffix to start with colon symbol.")
+            raise Exception("Expected variable declaration suffix to start with colon")
+
+    # def ParseVariableDeclarationSuffix(self):
+    #     if self.crtToken.type == lex.TokenType.COLON:
+    #         self.NextToken()
+    #         if self.crtToken.type == lex.TokenType.TYPE:
+    #             Type = ast.ASTTypeNode(self.crtToken.lexeme)
+    #             self.NextToken()
+    #             if self.crtToken.type == lex.TokenType.EQUALS:
+    #                 self.NextToken()
+    #                 expression = self.ParseExpression()
+    #                 if expression is None:
+    #                     raise Exception("Expected expression to not be null in Variable Declaration suffix.")
+    #                 return ast.ASTVariableDeclarationSuffixNode(Type, expression)
+    #             elif self.crtToken.type == lex.TokenType.LEFT_SQUARE_BRACKET:
+    #                 self.NextToken()
+    #                 return self.ParseVariableDeclArray()
+    #             else:
+    #                 raise Exception("Expected Variable Declaration Suffix to start with colon or left square bracket.")
+    #         else:
+    #             raise Exception("Expected type to follow colon in variable declaration suffix.")
+    #     else:
+    #         raise Exception("Expected variable declaration suffix to start with colon")
+
+    # def ParseVariableDeclarationSuffix(self):
+    #     if self.crtToken.type == lex.TokenType.COLON:
+    #         self.NextToken()
+    #         if self.crtToken.type == lex.TokenType.TYPE:
+    #             Type = ast.ASTTypeNode(self.crtToken.lexeme)
+    #             self.NextToken()
+    #             if Type is None:
+    #                 raise Exception("Expected type to not be null after colon in variable declaration suffix.")
+    #             if self.crtToken.type == lex.TokenType.EQUALS:
+    #                 self.NextToken()
+    #                 expression = self.ParseExpression()
+    #                 if expression is None:
+    #                     raise Exception("Expected expression to not be null in Variable Declaration suffix.")
+    #                 else:
+    #                     return ast.ASTVariableDeclarationSuffixNode(Type, expression)
+    #             else:
+    #                 raise Exception("Expected equal sign after type in variable declaration suffix.")
+    #
+    #         else:
+    #             raise Exception("Expected type to follow colon in variable declaration suffix.")
+    #     else:
+    #         raise Exception("Expected Variable Declaration Suffix to start with colon symbol.")
 
     def ParsePrintStatement(self):
         if self.crtToken.type == lex.TokenType.PRINT:
@@ -396,18 +486,34 @@ class Parser:
                 if identifier is None:
                     raise Exception("Expected identifier to follow 'let' keyword when parsing variable declaration.")
                 else:
-                    variableDeclarationSuffix = self.ParseVariableDeclarationSuffix()
-                    if variableDeclarationSuffix is None:
+                    suffix = self.ParseVariableDeclarationSuffix()
+                    if suffix is None:
                         raise Exception(
                             "Expected identifier to be followed by variable declaration suffix, but it is None")
                     else:
-                        return ast.ASTVariableDeclarationNode(identifier, variableDeclarationSuffix)
-
+                        return ast.ASTVariableDeclarationNode(identifier, suffix)
             else:
                 raise Exception("Expected identifier to follow 'let' keyword when parsing variable declaration.")
-
         else:
             raise Exception("Expected variable declaration to start with keyword: 'let'")
+
+    def ParseIdentifier(self):
+        if self.crtToken.type == lex.TokenType.IDENTIFIER:
+            identifier = ast.ASTIdentifierNode(self.crtToken.lexeme)
+            self.NextToken()
+            print("Variable Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
+
+            if self.crtToken.type == lex.TokenType.LEFT_SQUARE_BRACKET:
+                self.NextToken()
+                index_expr = self.ParseExpression()
+                if self.crtToken.type == lex.TokenType.RIGHT_SQUARE_BRACKET:
+                    self.NextToken()
+                    return ast.ASTArrayAccessNode(identifier, index_expr)
+                else:
+                    raise Exception("Expected closing square bracket ']' after array index expression.")
+            return identifier
+        else:
+            raise Exception("Expected identifier.")
 
     def ParseIfStatement(self):
         if self.crtToken.type == lex.TokenType.IF:
@@ -759,4 +865,3 @@ class Parser:
 
     def Parse(self):
         self.ASTroot = self.ParseProgram()
-

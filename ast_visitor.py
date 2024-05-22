@@ -24,6 +24,7 @@ class ASTVisitor:
     def visit_identifier_node(self, node):
         raise NotImplementedError()
 
+
     def visit_padread_node(self, node):
         raise NotImplementedError()
 

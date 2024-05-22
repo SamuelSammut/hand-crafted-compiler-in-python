@@ -2,6 +2,7 @@ from ast_visitor import ASTVisitor
 from symbol_table import SymbolTable
 from ast_node import *
 
+
 class SemanticVisitor(ASTVisitor):
     def __init__(self):
         self.return_encountered = None
@@ -47,15 +48,30 @@ class SemanticVisitor(ASTVisitor):
     def visit_statement_node(self, node):
         self.visit(node.statement)
 
+    # def visit_variable_declaration_node(self, node):
+    #     identifier = node.identifier.lexeme
+    #
+    #     if self.symbol_table.lookup_in_current_scope(identifier):
+    #         raise Exception(f"Variable '{identifier}' already declared in this scope")
+    #
+    #     self.visit(node.expr)
+    #
+    #     self.symbol_table.add(identifier, node.expr.Type.value)
+
     def visit_variable_declaration_node(self, node):
         identifier = node.identifier.lexeme
 
         if self.symbol_table.lookup_in_current_scope(identifier):
             raise Exception(f"Variable '{identifier}' already declared in this scope")
 
-        self.visit(node.expr)
-
-        self.symbol_table.add(identifier, node.expr.Type.value)
+        if isinstance(node.suffix, ASTVariableDeclArrayNode):
+            array_type = self.visit(node.suffix)
+            self.symbol_table.add(identifier, array_type)
+        elif isinstance(node.suffix, ASTVariableDeclarationSuffixNode):
+            self.visit(node.suffix)
+            self.symbol_table.add(identifier, node.suffix.Type.value)
+        else:
+            raise Exception(f"Unexpected suffix type in variable declaration: {type(node.suffix)}")
 
     def visit_variable_declaration_suffix_node(self, node):
         expr_type = self.visit(node.expr)
@@ -75,6 +91,44 @@ class SemanticVisitor(ASTVisitor):
         if assigned_type != declared_type and not (declared_type == "float" and assigned_type == "int"):
             raise Exception(
                 f"Type mismatch: cannot assign type '{assigned_type}' to variable '{identifier}' of type '{declared_type}'")
+
+    def visit_variable_decl_array_node(self, node):
+        if node.size:
+            array_size = int(node.size)
+            if len(node.literals) != array_size:
+                raise Exception(
+                    f"Array size {array_size} does not match the number of provided literals {len(node.literals)}"
+                )
+        for literal in node.literals:
+            literal_type = self.visit(literal)
+            if literal_type != node.Type.value:
+                raise Exception(
+                    f"Array contains mixed types. Expected all literals to be of type '{node.Type.value}', but found '{literal_type}'"
+                )
+        return f'array_of_{node.Type.value}'
+
+    # def visit_variable_decl_array_node(self, node):
+    #     if node.size:
+    #         array_size = int(node.size)
+    #         if len(node.literals) != array_size:
+    #             raise Exception(
+    #                 f"Array size {array_size} does not match the number of provided literals {len(node.literals)}")
+    #     for literal in node.literals:
+    #         literal_type = self.visit(literal)
+    #         if literal_type not in ['int', 'float', 'bool', 'colour']:
+    #             raise Exception(f"Invalid literal type '{literal_type}' in array declaration.")
+    #     return 'array'
+
+    def visit_array_access_node(self, node):
+        identifier_type = self.visit(node.identifier)
+        if not identifier_type.startswith('array_of_'):
+            raise Exception(f"Identifier '{node.identifier.lexeme}' is not an array.")
+        index_type = self.visit(node.index_expr)
+        if index_type != 'int':
+            raise Exception("Array index must be an integer.")
+        # Extract the element type from the array type
+        element_type = identifier_type[len('array_of_'):]
+        return element_type
 
     def visit_factor_node(self, node):
         return self.visit(node.factor)
@@ -99,7 +153,8 @@ class SemanticVisitor(ASTVisitor):
         if node.term2:
             term2_type = self.visit(node.term2)
             if simple_expr_type != term2_type:
-                if (simple_expr_type == "int" and term2_type == "float") or (simple_expr_type == "float" and term2_type == "int"):
+                if (simple_expr_type == "int" and term2_type == "float") or (
+                        simple_expr_type == "float" and term2_type == "int"):
                     simple_expr_type = "float"
                 else:
                     raise Exception(f"Type mismatch in simple expression: '{simple_expr_type}' and '{term2_type}'")
@@ -110,7 +165,8 @@ class SemanticVisitor(ASTVisitor):
         if node.next_simple_expr:
             next_expr_type = self.visit(node.next_simple_expr)
             if expr_type != next_expr_type:
-                if (expr_type == "int" and next_expr_type == "float") or (expr_type == "float" and next_expr_type == "int"):
+                if (expr_type == "int" and next_expr_type == "float") or (
+                        expr_type == "float" and next_expr_type == "int"):
                     expr_type = "float"
                 else:
                     raise Exception(f"Type mismatch in expression: '{expr_type}' and '{next_expr_type}'")

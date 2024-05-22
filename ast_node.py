@@ -11,6 +11,24 @@ class ASTStatementNode():
     def accept(self, visitor):
         visitor.visit_statement_node(self)
 
+class ASTVariableDeclArrayNode(ASTNode):
+    def __init__(self,Type, size, literals):
+        self.name = "ASTVariable_Decl_Array_Node"
+        self.Type = Type
+        self.size = size
+        self.literals = literals
+
+    def accept(self, visitor):
+        visitor.visit_variable_decl_array_node(self)
+
+class ASTArrayAccessNode(ASTNode):
+    def __init__(self, identifier, index_expr):
+        self.name = "ASTArray_Access_Node"
+        self.identifier = identifier
+        self.index_expr = index_expr
+
+    def accept(self, visitor):
+        visitor.visit_array_access_node(self)
 
 class ASTProgramNode():
     def __init__(self):
@@ -246,12 +264,10 @@ class ASTIntegerLiteralNode():
 
 
 class ASTVariableDeclarationNode():
-    def __init__(self, ast_identifier_node, ast_expression_node):
+    def __init__(self, ast_identifier_node, suffix):
         self.name = "ASTVariable_Declaration_Node"
         self.identifier = ast_identifier_node
-        self.expr = ast_expression_node
-
-        # get type of idetngfier
+        self.suffix = suffix
 
     def accept(self, visitor):
         visitor.visit_variable_declaration_node(self)
