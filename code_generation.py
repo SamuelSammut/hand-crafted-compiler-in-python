@@ -1,6 +1,7 @@
 from ast_visitor import ASTVisitor
 from symbol_table import SymbolTable
 from ast_node import *
+from symbol_table import FormalParamException
 
 
 class CodeGenerationVisitor(ASTVisitor):
@@ -13,14 +14,16 @@ class CodeGenerationVisitor(ASTVisitor):
         self.next_instruction_address = 0
         self.frame_opened = False
         self.function_instructions = []
-
+        self.coming_from_function_call = False
 
     def visit_all(self, nodes):
         for node in nodes:
-            self.visit(node)
+                self.visit(node)
 
     def generate(self, node):
         self.visit(node)
+        self.instructions.append("")
+        self.instructions.extend(self.function_instructions)
         return '\n'.join(self.instructions)
 
     def visit(self, node):
@@ -68,36 +71,39 @@ class CodeGenerationVisitor(ASTVisitor):
         self.add_instruction("halt", "End of program")
         self.symbol_table.exit_scope()
 
-    def visit_block_node(self, node):
-        allvars = self.symbol_table.get_variables_in_current_scope()
-        self.symbol_table.enter_scope()
-        self.current_scope_level += 1
-        self.add_instruction(f"oframe", f"Start of block with {len(node.stmts)} statements")
-        self.frame_opened = True
-        for var in allvars:
-            self.symbol_table.add(var['identifier'], {
-                'type': var['type'],
-                'level': self.current_scope_level,
-                'index': len(self.symbol_table.scopes[-1])
-            })
+    def visit_block_node(self, node, coming_from_function_call=False):
+        if not coming_from_function_call:
+            allvars = self.symbol_table.get_variables_in_current_scope()
+            self.symbol_table.enter_scope()
+            self.current_scope_level += 1
+            self.add_instruction(f"oframe", f"Start of block with {len(node.stmts)} statements")
+            self.frame_opened = True
+            for var in allvars:
+                self.symbol_table.add(var['identifier'], {
+                    'type': var['type'],
+                    'level': self.current_scope_level,
+                    'index': len(self.symbol_table.scopes[-1])
+                })
 
-        self.visit_all(node.stmts)
-        self.add_instruction("cframe", "End of block")
-        self.frame_opened = False
-        allvars = self.symbol_table.get_variables_in_current_scope()
-        self.current_scope_level -= 1
-        for var in allvars:
-            self.symbol_table.add(var['identifier'], {
-                'type': var['type'],
-                'level': self.current_scope_level,
-                'index': len(self.symbol_table.scopes[-1]) - 1
-            })
+            self.visit_all(node.stmts)
+            self.add_instruction("cframe", "End of block")
+            self.frame_opened = False
+            allvars = self.symbol_table.get_variables_in_current_scope()
+            self.current_scope_level -= 1
+            for var in allvars:
+                self.symbol_table.add(var['identifier'], {
+                    'type': var['type'],
+                    'level': self.current_scope_level,
+                    'index': len(self.symbol_table.scopes[-1]) - 1
+                })
+        else:
+            self.visit_all(node.stmts)
 
     def visit_statement_node(self, node):
         self.visit(node.statement)
 
     def visit_variable_declaration_node(self, node):
-        identifier = node.identifier.lexeme
+        initial_identifier = node.identifier.lexeme
         expr_value = None
         calling_saved_parameters = []
         parameter_created_identifiers = []
@@ -112,7 +118,7 @@ class CodeGenerationVisitor(ASTVisitor):
                 for params in factor.actual_params.actual_params:
                     function_identifier = factor.identifier.lexeme
                     if hasattr(params, "factor") and hasattr(params.factor, "lexeme"):
-                        count = count+1
+                        count = count + 1
                         var_info = self.symbol_table.lookup(params.factor.lexeme)
 
                         calling_saved_parameters.append(f"push [{var_info['index']}:{var_info['level']}]")
@@ -132,17 +138,15 @@ class CodeGenerationVisitor(ASTVisitor):
                         self.symbol_table.lookup(identifier)
                         index = self.symbol_table.scopes[-1][identifier]['index']
                         self.add_instruction("push 1", f"Allocate space for {identifier}")
-                        if not self.frame_opened:
-                            self.add_instruction("oframe", "Create a new frame")
-                        else:
-                            self.add_instruction("alloc", "Allocate additional space in the current frame")
+
+                        self.add_instruction("alloc", "Allocate additional space in the current frame")
                         self.add_instruction(f"push {expr_value}", f"Push initial value of {identifier}")
                         self.add_instruction(f"push {index}", f"Push index for {identifier}")
                         self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
                         self.add_instruction("st", f"Store {identifier} in current frame")
 
-                final_p = P1+P2
-                sor = sorted(final_p, key = lambda x:x[1])
+                final_p = P1 + P2
+                sor = sorted(final_p, key=lambda x: x[1])
 
                 for s in sor:
                     if s[0].__contains__(function_identifier):
@@ -150,43 +154,66 @@ class CodeGenerationVisitor(ASTVisitor):
                         self.add_instruction(f"push [{var_info['index']}:{var_info['level']}]")
                     else:
                         self.add_instruction(s[0])
-
+                self.symbol_table.add(initial_identifier, {
+                    'type': node.expr.Type,
+                    'level': self.current_scope_level,
+                    'index': len(self.symbol_table.scopes[-1])
+                })
                 self.add_instruction("push 0")
-                self.add_instruction(f".{function_identifier}")
+                self.add_instruction(f"push .{function_identifier}")
                 self.add_instruction("call")
+                self.coming_from_function_call = True
 
 
             elif hasattr(factor, 'literal') and factor.literal is not None:
                 expr_value = factor.literal.value
 
-                self.symbol_table.add(identifier, {
+                self.symbol_table.add(initial_identifier, {
                     'type': node.expr.Type,
                     'level': self.current_scope_level,
                     'index': len(self.symbol_table.scopes[-1])
                 })
-                self.symbol_table.lookup(identifier)
-                index = self.symbol_table.scopes[-1][identifier]['index']
-                self.add_instruction("push 1", f"Allocate space for {identifier}")
+                self.symbol_table.lookup(initial_identifier)
+                index = self.symbol_table.scopes[-1][initial_identifier]['index']
+                self.add_instruction("push 1", f"Allocate space for {initial_identifier}")
                 if not self.frame_opened:
                     self.add_instruction("oframe", "Create a new frame")
                 else:
                     self.add_instruction("alloc", "Allocate additional space in the current frame")
-                self.add_instruction(f"push {expr_value}", f"Push initial value of {identifier}")
-                self.add_instruction(f"push {index}", f"Push index for {identifier}")
-                self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
-                self.add_instruction("st", f"Store {identifier} in current frame")
+                self.add_instruction(f"push {expr_value}", f"Push initial value of {initial_identifier}")
+                self.add_instruction(f"push {index}", f"Push index for {initial_identifier}")
+                self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {initial_identifier}")
+                self.add_instruction("st", f"Store {initial_identifier} in current frame")
+
 
     def visit_assignment_node(self, node):
         identifier = node.id.lexeme
-        self.visit(node.expr)
-        var_info = self.symbol_table.lookup(identifier)
-        self.add_instruction(f"push {var_info['index']}", f"Push index for {identifier}")
-        self.add_instruction(f"push {var_info['level']}", f"Push scope level for {identifier}")
-        self.add_instruction("st", f"Store value in {identifier}")
+        try:
+            paramCheck = self.symbol_table.lookupParameters(node.id.lexeme)
+        except FormalParamException as e:
+            paramCheck = None
+        if paramCheck is not None:
+            param_info = self.symbol_table.lookupParameters(node.id.lexeme)
+            self.visit(node.expr)
+            # var_info = self.symbol_table.lookup(identifier)
+            self.add_instruction(f"push {param_info['index']}", f"Push index for {identifier}")
+            self.add_instruction(f"push {param_info['level']}", f"Push scope level for {identifier}")
+            self.add_instruction("st", f"Store value in {identifier}")
+
+        else:
+            var_info = self.symbol_table.lookup(node.id.lexeme)
+            self.visit(node.expr)
+            # var_info = self.symbol_table.lookup(identifier)
+            self.add_instruction(f"push {var_info['index']}", f"Push index for {identifier}")
+            self.add_instruction(f"push {var_info['level']}", f"Push scope level for {identifier}")
+            self.add_instruction("st", f"Store value in {identifier}")
 
     def visit_print_statement_node(self, node):
-        self.visit(node.expr)
-        self.add_instruction("print", "Print the value")
+        if self.coming_from_function_call == False:
+            self.visit(node.expr)
+            self.add_instruction("print", "Print the value")
+        elif self.coming_from_function_call == True:
+            self.add_instruction("print", "Print the value")
 
     def visit_delay_statement_node(self, node):
         expr_value = self.visit(node.expr)
@@ -261,7 +288,7 @@ class CodeGenerationVisitor(ASTVisitor):
 
         self.visit(node.block)
 
-        self.add_instruction(f"push #PC-{(self.get_next_address() - loop_start_address) }", "Jump back to loop start")
+        self.add_instruction(f"push #PC-{(self.get_next_address() - loop_start_address)}", "Jump back to loop start")
         self.add_instruction("jmp", "Jump to loop start")
 
         # End of the loop
@@ -269,28 +296,44 @@ class CodeGenerationVisitor(ASTVisitor):
         self.instructions[cjmp_index] = f"push #PC+{loop_end_address - cjmp_index}"
 
     def visit_function_declaration_node(self, node):
-        identifier = node.identifier.lexeme
-        self.function_addresses[identifier] = self.get_next_address()
-
-        # self.symbol_table.add(identifier, {
-        #     'type': node.Type.value,
-        #     'level': self.current_scope_level,
-        #     'index': len(self.symbol_table.scopes[-1])
-        # })
-        self.add_instruction(f".{identifier}")
-        self.visit(node.formalParams)
-        self.symbol_table.enter_scope()
         self.current_scope_level += 1
-        self.visit(node.block)
-        self.symbol_table.exit_scope()
-        self.current_scope_level -= 1
 
-    def visit_function_call_node(self, node):
-        identifier = node.identifier.lexeme
-        for param in node.actual_params.actual_params:
-            param_value = self.visit(param)
-            self.add_instruction(f"push {param_value}", f"Push parameter {param.lexeme} for function {identifier}")
-        self.add_instruction(f"call #{self.function_addresses[identifier]}", f"Call function {identifier}")
+        function_instructions = []
+
+        function_instructions.append(f".{node.identifier.lexeme}")
+
+        # Temporarily switch to function_instructions
+        old_instructions, self.instructions = self.instructions, function_instructions
+        self.visit(node.formalParams)
+        param_count = len(node.formalParams.formal_params)
+
+        formal_parameters_scope = self.symbol_table.formal_parameters_scope
+        for p in reversed(range(param_count)):
+            # Assuming you have a way to get the parameter name based on 'p'
+            # For instance, if param_count represents the count of parameters
+            param_name = list(formal_parameters_scope[0].keys())[p]
+
+            # Extract the index value for the parameter
+            index = formal_parameters_scope[0][param_name]['index']
+            scope = self.current_scope_level
+
+            # Adding instructions to function_instructions list
+            function_instructions.append(f"push {index}")
+            function_instructions.append(f"push {scope}")
+            function_instructions.append("st")
+        self.visit_block_node(node=node.block, coming_from_function_call=True)
+        self.instructions = old_instructions
+
+        self.function_instructions.extend(function_instructions)
+        self.current_scope_level -= 1
+        self.coming_from_function_call = True
+
+    # def visit_function_call_node(self, node):
+    #     identifier = node.identifier.lexeme
+    #     for param in node.actual_params.actual_params:
+    #         param_value = self.visit(param)
+    #         self.add_instruction(f"push {param_value}", f"Push parameter {param.lexeme} for function {identifier}")
+    #     self.add_instruction(f"call #{self.function_addresses[identifier]}", f"Call function {identifier}")
 
     def visit_return_statement_node(self, node):
         self.visit(node.expr)
@@ -390,8 +433,20 @@ class CodeGenerationVisitor(ASTVisitor):
         return expr_value
 
     def visit_identifier_node(self, node):
-        var_info = self.symbol_table.lookup(node.lexeme)
-        self.add_instruction(f"push [{var_info['index']}:{var_info['level']}]", f"Push value of variable {node.lexeme}")
+        try:
+            paramCheck = self.symbol_table.lookupParameters(node.lexeme)
+        except FormalParamException as e:
+            paramCheck = None
+        if paramCheck is not None:
+            param_info = self.symbol_table.lookupParameters(node.lexeme)
+            self.add_instruction(f"push [{param_info['index']}:{param_info['level']}]",
+                                 f"Push value of variable {node.lexeme}")
+        else:
+            var_info = self.symbol_table.lookup(node.lexeme)
+            self.add_instruction(f"push [{var_info['index']}:{var_info['level']}]",
+                                 f"Push value of variable {node.lexeme}")
+
+        # self.add_instruction(f"push [{var_info['index']}:{var_info['level']}]", f"Push value of variable {node.lexeme}")
         return node.lexeme
 
     def visit_actual_params_node(self, node):
@@ -400,29 +455,37 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_formal_parameter_node(self, node):
         identifier = node.identifier.lexeme
-        if node.Type.value == 'int' or node.Type.value == 'float':
-            value = 0
-        elif node.Type.value == 'bool':
-            value = 'false'
-        elif node.Type.value == 'colour':
-            value = '#000000'
-        self.symbol_table.add(identifier, {
+        self.symbol_table.add_formal_parameter(identifier, {
             'type': node.Type.value,
             'level': self.current_scope_level,
-            'index': len(self.symbol_table.scopes[-1])
+            'index': len(self.symbol_table.formal_parameters_scope[-1])
         })
-        self.symbol_table.lookup(identifier)
-        index = self.symbol_table.scopes[-1][identifier]['index']
-        self.add_instruction("push 1", f"Allocate space for {identifier}")
-        if not self.frame_opened:
-            self.add_instruction("oframe", "Create a new frame")
-        else:
-            self.add_instruction("alloc", "Allocate additional space in the current frame")
-        self.add_instruction(f"push {value}", f"Push initial value of {identifier}")
-        self.add_instruction(f"push {index}", f"Push index for {identifier}")
-        self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
-        self.add_instruction("st", f"Store {identifier} in current frame")
 
+    # def visit_formal_parameter_node(self, node):
+    #     pass
+    # identifier = node.identifier.lexeme
+    # # if node.Type.value == 'int' or node.Type.value == 'float':
+    # #     value = 0
+    # # elif node.Type.value == 'bool':
+    # #     value = 'false'
+    # # elif node.Type.value == 'colour':
+    # #     value = '#000000'
+    # self.symbol_table.add(identifier, {
+    #     'type': node.Type.value,
+    #     'level': self.current_scope_level,
+    #     'index': len(self.symbol_table.scopes[-1])
+    # })
+    # self.symbol_table.lookup(identifier)
+    # index = self.symbol_table.scopes[-1][identifier]['index']
+    # self.add_instruction("push 1", f"Allocate space for {identifier}")
+    # if not self.frame_opened:
+    #     self.add_instruction("oframe", "Create a new frame")
+    # else:
+    #     self.add_instruction("alloc", "Allocate additional space in the current frame")
+    # self.add_instruction(f"push {value}", f"Push initial value of {identifier}")
+    # self.add_instruction(f"push {index}", f"Push index for {identifier}")
+    # self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
+    # self.add_instruction("st", f"Store {identifier} in current frame")
 
     def visit_formal_params(self, node):
         for param in node.formal_params:

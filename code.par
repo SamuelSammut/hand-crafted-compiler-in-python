@@ -1,4 +1,9 @@
-let yz:float = 23.1;
-let x : int = addone(true, yz, 3);
+fun addone(x:int, y:int) -> int
+{
 
-fun addone
+    x = x + y;
+    return x;
+}
+
+let z:int = addone(5, 5);
+__print y;
