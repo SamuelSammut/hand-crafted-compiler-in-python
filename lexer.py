@@ -574,13 +574,6 @@ class Lexer:
         self.Tx[117][self.lexeme_list.index("e_letter")] = 118
         self.Tx[118][self.lexeme_list.index("_")] = 108
 
-        # self.Tx[0][self.lexeme_list.index("_")] = 87
-        # self.Tx[87][self.lexeme_list.index("_")] = 88
-        # self.Tx[88][self.lexeme_list.index("p_letter")] = 89
-        # self.Tx[89][self.lexeme_list.index("r_letter")] = 90
-        # self.Tx[90][self.lexeme_list.index("i_letter")] = 91
-        # self.Tx[91][self.lexeme_list.index("n_letter")] = 92
-        # self.Tx[92][self.lexeme_list.index("t_letter")] = 93
 
         # Other keywords
 
@@ -909,7 +902,7 @@ class Lexer:
 
         lexeme = lexeme[:-1]  # remove the last character added which sent the lexer to state -1
 
-        syntax_error = False;
+        syntax_error = False
         # rollback
         while len(stack) > 0:
             if stack[-1] == -2:  # report a syntax error
@@ -918,16 +911,13 @@ class Lexer:
 
                 # Pop this state if not an accepting state.
             if not self.AcceptingStates(stack[-1]):
-                stack.pop();
-                # print("POPPED => ", stack)
+                stack.pop()
                 lexeme = lexeme[:-1]
 
-            # This is an accepting state ... return it.
             else:
                 state = stack.pop()
                 break
 
-        # print("Lexeme: ", lexeme, "with state: ", state)
 
         if syntax_error:
             return Token(TokenType.VOID, "error"), "error"
@@ -938,7 +928,6 @@ class Lexer:
             return Token(TokenType.VOID, "error"), "error"
 
     def GenerateTokens(self, src_program_str):
-        # print("INPUT:: " + src_program_str)
         tokens_list = []
         src_program_idx = 0
         token, lexeme = self.NextToken(src_program_str, src_program_idx)
@@ -946,7 +935,6 @@ class Lexer:
 
         while token.type != TokenType.END:  # this loop is simulating the Parser asking for the next Token
             src_program_idx = src_program_idx + len(lexeme)
-            # print("Nxt TOKEN: ", token, " ", lexeme, "(", len(lexeme), ")  => IDX: ", src_program_idx)
             if not self.EndOfInput(src_program_str, src_program_idx):
                 token, lexeme = self.NextToken(src_program_str, src_program_idx)
                 tokens_list.append(token)
@@ -955,16 +943,5 @@ class Lexer:
             else:
                 token, lexeme = Token(TokenType.END, "END"), "END"
 
-        # if token.type == TokenType.END:
-        #     # print("Encountered end of Input token!! DONE")
 
         return tokens_list
-
-#
-# lex = Lexer()
-# toks = lex.GenerateTokens(" __randi")
-#
-# for t in toks:
-#     print(t.type, t.lexeme)
-
-
