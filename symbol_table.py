@@ -1,6 +1,6 @@
 class SymbolTable:
     def __init__(self):
-        self.scopes = [{}]  # Stack of scopes, each scope is a dictionary
+        self.scopes = [{}]
         self.formal_parameters_scope = [{}]
 
     def enter_scope(self):
@@ -16,13 +16,10 @@ class SymbolTable:
             self.formal_parameters_scope[-1][identifier] = attributes
 
     def add(self, identifier, attributes):
-        # Check if the variable already exists in the current scope
         if identifier in self.scopes[-1]:
             self.update(identifier, attributes)
         else:
             self.scopes[-1][identifier] = attributes
-
-
 
     def get_variables_in_current_scope(self):
         current_scope_vars = []

@@ -2,7 +2,6 @@ from ast_visitor import ASTVisitor
 from symbol_table import SymbolTable
 from ast_node import *
 
-
 class SemanticVisitor(ASTVisitor):
     def __init__(self):
         self.return_encountered = None
@@ -48,16 +47,6 @@ class SemanticVisitor(ASTVisitor):
     def visit_statement_node(self, node):
         self.visit(node.statement)
 
-    # def visit_variable_declaration_node(self, node):
-    #     identifier = node.identifier.lexeme
-    #
-    #     if self.symbol_table.lookup_in_current_scope(identifier):
-    #         raise Exception(f"Variable '{identifier}' already declared in this scope")
-    #
-    #     self.visit(node.expr)
-    #
-    #     self.symbol_table.add(identifier, node.expr.Type.value)
-
     def visit_variable_declaration_node(self, node):
         identifier = node.identifier.lexeme
 
@@ -81,16 +70,32 @@ class SemanticVisitor(ASTVisitor):
                 f"Type mismatch: declared type '{node.Type.value}' does not match expression type '{expr_type}'")
 
     def visit_assignment_node(self, node):
-        identifier = node.id.lexeme
-        if not self.symbol_table.lookup(identifier):
-            raise Exception(f"Variable '{identifier}' not declared before assignment")
+        if isinstance(node.id, ASTArrayAccessNode):
+            array_type = self.visit(node.id.identifier)
+            if not array_type.startswith('array_of_'):
+                raise Exception(f"Identifier '{node.id.identifier.lexeme}' is not an array.")
 
-        assigned_type = self.visit(node.expr)
-        declared_type = self.symbol_table.lookup(identifier)
+            index_type = self.visit(node.id.index_expr)
+            if index_type != 'int':
+                raise Exception("Array index must be an integer.")
 
-        if assigned_type != declared_type and not (declared_type == "float" and assigned_type == "int"):
-            raise Exception(
-                f"Type mismatch: cannot assign type '{assigned_type}' to variable '{identifier}' of type '{declared_type}'")
+            value_type = self.visit(node.expr)
+            element_type = array_type[len('array_of_'):]
+            if value_type != element_type:
+                raise Exception(
+                    f"Type mismatch: array element type is '{element_type}' but assigned value is '{value_type}'")
+        else:
+            identifier = node.id.lexeme
+            if not self.symbol_table.lookup(identifier):
+                raise Exception(f"Variable '{identifier}' not declared before assignment")
+
+            assigned_type = self.visit(node.expr)
+            declared_type = self.symbol_table.lookup(identifier)
+
+            if assigned_type != declared_type and not (declared_type == "float" and assigned_type == "int"):
+                raise Exception(
+                    f"Type mismatch: cannot assign type '{assigned_type}' to variable '{identifier}' of type '{declared_type}'")
+
 
     def visit_variable_decl_array_node(self, node):
         if node.size:
@@ -107,17 +112,6 @@ class SemanticVisitor(ASTVisitor):
                 )
         return f'array_of_{node.Type.value}'
 
-    # def visit_variable_decl_array_node(self, node):
-    #     if node.size:
-    #         array_size = int(node.size)
-    #         if len(node.literals) != array_size:
-    #             raise Exception(
-    #                 f"Array size {array_size} does not match the number of provided literals {len(node.literals)}")
-    #     for literal in node.literals:
-    #         literal_type = self.visit(literal)
-    #         if literal_type not in ['int', 'float', 'bool', 'colour']:
-    #             raise Exception(f"Invalid literal type '{literal_type}' in array declaration.")
-    #     return 'array'
 
     def visit_array_access_node(self, node):
         identifier_type = self.visit(node.identifier)
@@ -126,7 +120,6 @@ class SemanticVisitor(ASTVisitor):
         index_type = self.visit(node.index_expr)
         if index_type != 'int':
             raise Exception("Array index must be an integer.")
-        # Extract the element type from the array type
         element_type = identifier_type[len('array_of_'):]
         return element_type
 
@@ -145,7 +138,6 @@ class SemanticVisitor(ASTVisitor):
         return term_type
 
     def visit_sub_expression_node(self, node):
-        # Visit the inner expression and return its type
         return self.visit(node.expr)
 
     def visit_simple_expression_node(self, node):
@@ -221,16 +213,13 @@ class SemanticVisitor(ASTVisitor):
         if node.formalParams:
             for param in node.formalParams.formal_params:
                 self.visit_formal_parameter_node(param)
-                # self.symbol_table.add(param.identifier.lexeme, param.Type.value)
 
-        # Track if we have a return statement on all paths
         all_paths_return = self.check_all_paths_return(node.block.stmts)
 
         if not all_paths_return:
             raise Exception(f"Function '{identifier}' is missing a return statement on some execution paths")
 
         self.visit(node.block)
-        # self.symbol_table.exit_scope()
         self.current_function_type = None
 
     def visit_function_call_node(self, node):

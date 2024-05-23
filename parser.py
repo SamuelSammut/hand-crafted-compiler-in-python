@@ -2,14 +2,12 @@ import ast_node as ast
 import lexer as lex
 
 
-# from print_ast_visitor import PrintNodesVisitor
-
 class Parser:
     def __init__(self, src_program_str):
         self.name = "PARSEAR"
         self.lexer = lex.Lexer()
-        self.index = -1  # start at -1 so that the first token is at index 0
-        self.nextTokenIndex = 0  # Initialize next token index
+        self.index = -1
+        self.nextTokenIndex = 0
         self.src_program = src_program_str
         self.tokens = self.lexer.GenerateTokens(self.src_program)
         print("[Parser] Lexer generated token list ::")
@@ -17,23 +15,22 @@ class Parser:
             print(t.type, t.lexeme)
         self.crtToken = lex.Token("", lex.TokenType.VOID)
         self.nextToken = lex.Token("", lex.TokenType.VOID)
-        self.ASTroot = None  # this will need to change once you introduce the AST program node ....
-        # that should become the new root node
+        self.ASTroot = None
 
     def PeekNextToken(self, k=1):
         peek_index = self.index + k
         while peek_index < len(self.tokens) and self.tokens[peek_index].type == lex.TokenType.WS:
-            peek_index += 1  # Skip over whitespace tokens
+            peek_index += 1
         if peek_index < len(self.tokens):
             return self.tokens[peek_index]
         else:
             return lex.Token(lex.TokenType.END, "END")
 
     def NextTokenSkipWS(self):
-        self.index += 1  # Grab the next token
+        self.index += 1
         if self.index < len(self.tokens):
             self.crtToken = self.tokens[self.index]
-            self.nextToken = self.PeekNextToken()  # Update next token
+            self.nextToken = self.PeekNextToken()
         else:
             self.crtToken = lex.Token(lex.TokenType.END, "END")
             self.nextToken = lex.Token(lex.TokenType.END, "END")
@@ -75,7 +72,6 @@ class Parser:
             print("Pad Height Literal Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
         elif self.crtToken.type == lex.TokenType.PAD_READ:
             literal = self.ParsePadRead()
-            # self.NextToken()
 
         return ast.ASTLiteralNode(literal)
 
@@ -90,14 +86,11 @@ class Parser:
             print("LEFT ROUND BRACKET Token Matched ::: Nxt Token is ", self.crtToken.type, self.crtToken.lexeme)
 
             actual_params = None
-            # Check if there are actual parameters
             if self.crtToken.type != lex.TokenType.RIGHT_ROUND_BRACKET:
                 actual_params = self.ParseActualParams()
 
-            # After parsing actual parameters, expect a closing parenthesis
             if self.crtToken.type == lex.TokenType.RIGHT_ROUND_BRACKET:
-                self.NextToken()  # Move past the closing parenthesis
-                # Create and return the function call AST node
+                self.NextToken()
                 return ast.ASTFunctionCallNode(identifier, actual_params)
         return ast.ASTFunctionCallNode(identifier)
 
@@ -134,7 +127,6 @@ class Parser:
         if self.crtToken.type == lex.TokenType.AS:
             self.NextToken()
 
-            # Parse the Type
             Type = ast.ASTTypeNode(self.crtToken.lexeme)
             self.NextToken()
 
@@ -231,8 +223,7 @@ class Parser:
 
     def ParseAssignment(self):
         if self.crtToken.type == lex.TokenType.IDENTIFIER:
-            assignment_lhs = ast.ASTIdentifierNode(self.crtToken.lexeme)
-            self.NextToken()
+            assignment_lhs = self.ParseIdentifier()
             if self.crtToken.type == lex.TokenType.EQUALS:
                 self.NextToken()
                 assignment_rhs = self.ParseExpression()
@@ -252,7 +243,6 @@ class Parser:
         multiplicative_op = None
         factor2 = None
 
-        # Check if there are additional factors with multiplicative operators
         while self.crtToken.type == lex.TokenType.MULTIPLICATIVE_OPERAND:
             multiplicative_op = self.crtToken.lexeme
             if multiplicative_op is None:
@@ -265,19 +255,6 @@ class Parser:
 
         return factor1
 
-    # def ParseSimpleExpression(self):
-    #     terms = []
-    #     term1 = self.ParseTerm()
-    #     terms.append(term1)
-    #     if term1 is None:
-    #         raise Exception("Initial term empty when parsing simple expression.")
-    #     while self.crtToken.type == lex.TokenType.ADDITIVE_OPERAND:
-    #         self.NextToken()
-    #         termsN = self.ParseTerm()
-    #         if termsN is None:
-    #             raise Exception("No term following additive operand in simple expression parsing.")
-    #         terms.append(termsN)
-    #     return ast.ASTSimpleExpressionNode(terms)
     def ParseSimpleExpression(self):
         term1 = self.ParseTerm()
         if term1 is None:
@@ -347,7 +324,7 @@ class Parser:
             if self.crtToken.type == lex.TokenType.TYPE:
                 Type = ast.ASTTypeNode(self.crtToken.lexeme)
                 self.NextToken()
-                self.arrayType = Type  # Set the arrayType for later use
+                self.arrayType = Type
                 if self.crtToken.type == lex.TokenType.EQUALS:
                     self.NextToken()
                     expression = self.ParseExpression()
@@ -363,51 +340,6 @@ class Parser:
                 raise Exception("Expected type to follow colon in variable declaration suffix.")
         else:
             raise Exception("Expected variable declaration suffix to start with colon")
-
-    # def ParseVariableDeclarationSuffix(self):
-    #     if self.crtToken.type == lex.TokenType.COLON:
-    #         self.NextToken()
-    #         if self.crtToken.type == lex.TokenType.TYPE:
-    #             Type = ast.ASTTypeNode(self.crtToken.lexeme)
-    #             self.NextToken()
-    #             if self.crtToken.type == lex.TokenType.EQUALS:
-    #                 self.NextToken()
-    #                 expression = self.ParseExpression()
-    #                 if expression is None:
-    #                     raise Exception("Expected expression to not be null in Variable Declaration suffix.")
-    #                 return ast.ASTVariableDeclarationSuffixNode(Type, expression)
-    #             elif self.crtToken.type == lex.TokenType.LEFT_SQUARE_BRACKET:
-    #                 self.NextToken()
-    #                 return self.ParseVariableDeclArray()
-    #             else:
-    #                 raise Exception("Expected Variable Declaration Suffix to start with colon or left square bracket.")
-    #         else:
-    #             raise Exception("Expected type to follow colon in variable declaration suffix.")
-    #     else:
-    #         raise Exception("Expected variable declaration suffix to start with colon")
-
-    # def ParseVariableDeclarationSuffix(self):
-    #     if self.crtToken.type == lex.TokenType.COLON:
-    #         self.NextToken()
-    #         if self.crtToken.type == lex.TokenType.TYPE:
-    #             Type = ast.ASTTypeNode(self.crtToken.lexeme)
-    #             self.NextToken()
-    #             if Type is None:
-    #                 raise Exception("Expected type to not be null after colon in variable declaration suffix.")
-    #             if self.crtToken.type == lex.TokenType.EQUALS:
-    #                 self.NextToken()
-    #                 expression = self.ParseExpression()
-    #                 if expression is None:
-    #                     raise Exception("Expected expression to not be null in Variable Declaration suffix.")
-    #                 else:
-    #                     return ast.ASTVariableDeclarationSuffixNode(Type, expression)
-    #             else:
-    #                 raise Exception("Expected equal sign after type in variable declaration suffix.")
-    #
-    #         else:
-    #             raise Exception("Expected type to follow colon in variable declaration suffix.")
-    #     else:
-    #         raise Exception("Expected Variable Declaration Suffix to start with colon symbol.")
 
     def ParsePrintStatement(self):
         if self.crtToken.type == lex.TokenType.PRINT:
@@ -648,7 +580,6 @@ class Parser:
     def ParseFormalParameters(self):
         formalParameters = []
         if self.crtToken.type == lex.TokenType.IDENTIFIER:
-            # self.NextToken()
             formalParameter1 = self.ParseFormalParameter()
             if formalParameter1 is None:
                 raise Exception("First formal parameter is null.")
@@ -681,7 +612,6 @@ class Parser:
                     if self.crtToken.type == lex.TokenType.LEFT_ROUND_BRACKET:
                         self.NextToken()
                         if self.crtToken.type == lex.TokenType.IDENTIFIER:
-                            # self.NextToken()
                             formalParams = self.ParseFormalParameters()
                             if formalParams is None:
                                 raise Exception("Formal parameters in function declaration is null.")
@@ -828,8 +758,6 @@ class Parser:
             raise Exception("Expected for statement to start with 'for' keyword.")
 
     def ParseBlock(self):
-        # At the moment we only have assignment statements .... you'll need to add more for the assignment -
-        # branching depends on the token type
         if self.crtToken.type == lex.TokenType.LEFT_CURLY_BRACKET:
             self.NextToken()
             block = ast.ASTBlockNode()
@@ -850,9 +778,7 @@ class Parser:
             raise Exception("Expected block to start with left curly brackets.")
 
     def ParseProgram(self):
-        self.NextToken()  # set crtToken to the first token (skip all WS)
-        # At the moment we only have assignment statements .... you'll need to add more for the assignment -
-        # branching depends on the token type
+        self.NextToken()
 
         program = ast.ASTProgramNode()
 

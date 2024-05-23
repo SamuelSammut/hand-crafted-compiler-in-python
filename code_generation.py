@@ -104,85 +104,146 @@ class CodeGenerationVisitor(ASTVisitor):
 
     def visit_variable_declaration_node(self, node):
         initial_identifier = node.identifier.lexeme
-        expr_value = None
-        calling_saved_parameters = []
-        parameter_created_identifiers = []
-        P1 = []
-        P2 = []
-        final_p = []
-        if hasattr(node, 'expr') and hasattr(node.expr, 'expr') and hasattr(node.expr.expr, 'factor'):
-            factor = node.expr.expr.factor
-            if hasattr(factor, 'actual_params'):
-                count = 0
+        identifier = node.identifier.lexeme
+        if isinstance(node.suffix, ASTVariableDeclArrayNode):
+            array_size = node.suffix.size if node.suffix.size is not None else len(node.suffix.literals)
+            self.symbol_table.add(identifier, {
+                'type': f'array_of_{node.suffix.Type.value}',
+                'level': self.current_scope_level,
+                'index': len(self.symbol_table.scopes[-1]),
+                'size': array_size
+            })
 
-                for params in factor.actual_params.actual_params:
-                    function_identifier = factor.identifier.lexeme
-                    if hasattr(params, "factor") and hasattr(params.factor, "lexeme"):
-                        count = count + 1
-                        var_info = self.symbol_table.lookup(params.factor.lexeme)
+            for literal in reversed(node.suffix.literals):
+                self.visit(literal)
+            self.add_instruction(f"push {array_size}", f"Push size of array {identifier}")
+            self.add_instruction("alloc")
+            self.add_instruction(f"push {array_size}", f"Push size of array {identifier}")
+            self.add_instruction(f"push {self.symbol_table.scopes[-1][identifier]['index']}",
+                                 f"Push index for array {identifier}")
+            self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for array {identifier}")
+            self.add_instruction("sta", f"Store array {identifier} in memory")
+        else:
+            expr_value = None
+            calling_saved_parameters = []
+            parameter_created_identifiers = []
+            P1 = []
+            P2 = []
+            final_p = []
+            if hasattr(node, 'suffix') and hasattr(node.suffix, 'expr') and hasattr(node.suffix.expr, 'factor'):
+                factor = node.suffix.expr.factor
+                if hasattr(factor, 'actual_params'):
+                    count = 0
 
-                        calling_saved_parameters.append(f"push [{var_info['index']}:{var_info['level']}]")
-                        P1.append((f"push [{var_info['index']}:{var_info['level']}]", count))
+                    for params in factor.actual_params.actual_params:
+                        function_identifier = factor.identifier.lexeme
+                        if hasattr(params, "factor") and hasattr(params.factor, "lexeme"):
+                            count = count + 1
+                            var_info = self.symbol_table.lookup(params.factor.lexeme)
 
-                    elif hasattr(params, "factor") and hasattr(params.factor, "literal"):
-                        count = count + 1
-                        identifier = function_identifier + str(count)
-                        parameter_created_identifiers.append(identifier)
-                        P2.append((identifier, count))
-                        expr_value = params.factor.literal.value
-                        self.symbol_table.add(identifier, {
-                            'type': params.factor.name,
-                            'level': self.current_scope_level,
-                            'index': len(self.symbol_table.scopes[-1])
-                        })
-                        self.symbol_table.lookup(identifier)
-                        index = self.symbol_table.scopes[-1][identifier]['index']
-                        self.add_instruction("push 1", f"Allocate space for {identifier}")
+                            calling_saved_parameters.append(f"push [{var_info['index']}:{var_info['level']}]")
+                            P1.append((f"push [{var_info['index']}:{var_info['level']}]", count))
 
-                        self.add_instruction("alloc", "Allocate additional space in the current frame")
-                        self.add_instruction(f"push {expr_value}", f"Push initial value of {identifier}")
-                        self.add_instruction(f"push {index}", f"Push index for {identifier}")
-                        self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {identifier}")
-                        self.add_instruction("st", f"Store {identifier} in current frame")
+                        elif hasattr(params, "factor") and hasattr(params.factor, "literal"):
+                            count = count + 1
+                            identifier = function_identifier + str(count)
+                            parameter_created_identifiers.append(identifier)
+                            P2.append((identifier, count))
+                            expr_value = params.factor.literal.value
+                            self.symbol_table.add(identifier, {
+                                'type': params.factor.name,
+                                'level': self.current_scope_level,
+                                'index': len(self.symbol_table.scopes[-1])
+                            })
+                            self.symbol_table.lookup(identifier)
+                            index = self.symbol_table.scopes[-1][identifier]['index']
+                            self.add_instruction("push 1", f"Allocate space for {identifier}")
 
-                final_p = P1 + P2
-                sor = sorted(final_p, key=lambda x: x[1])
+                            self.add_instruction("alloc", "Allocate additional space in the current frame")
+                            self.add_instruction(f"push {expr_value}", f"Push initial value of {identifier}")
+                            self.add_instruction(f"push {index}", f"Push index for {identifier}")
+                            self.add_instruction(f"push {self.current_scope_level}",
+                                                 f"Push scope level for {identifier}")
+                            self.add_instruction("st", f"Store {identifier} in current frame")
 
-                for s in sor:
-                    if s[0].__contains__(function_identifier):
-                        var_info = self.symbol_table.lookup(s[0])
-                        self.add_instruction(f"push [{var_info['index']}:{var_info['level']}]")
+                    final_p = P1 + P2
+                    sor = sorted(final_p, key=lambda x: x[1])
+
+                    for s in sor:
+                        if s[0].__contains__(function_identifier):
+                            var_info = self.symbol_table.lookup(s[0])
+                            self.add_instruction(f"push [{var_info['index']}:{var_info['level']}]")
+                        else:
+                            self.add_instruction(s[0])
+                    self.symbol_table.add(initial_identifier, {
+                        'type': node.suffix.Type,
+                        'level': self.current_scope_level,
+                        'index': len(self.symbol_table.scopes[-1])
+                    })
+                    self.add_instruction("push 0")
+                    self.add_instruction(f"push .{function_identifier}")
+                    self.add_instruction("call")
+                    self.coming_from_function_call = True
+
+                elif hasattr(factor, 'literal') and factor.literal is not None:
+                    expr_value = factor.literal.value
+
+                    self.symbol_table.add(initial_identifier, {
+                        'type': node.suffix.Type,
+                        'level': self.current_scope_level,
+                        'index': len(self.symbol_table.scopes[-1])
+                    })
+                    self.symbol_table.lookup(initial_identifier)
+                    index = self.symbol_table.scopes[-1][initial_identifier]['index']
+                    self.add_instruction("push 1", f"Allocate space for {initial_identifier}")
+                    if not self.frame_opened:
+                        self.add_instruction("oframe", "Create a new frame")
                     else:
-                        self.add_instruction(s[0])
-                self.symbol_table.add(initial_identifier, {
-                    'type': node.expr.Type,
-                    'level': self.current_scope_level,
-                    'index': len(self.symbol_table.scopes[-1])
-                })
-                self.add_instruction("push 0")
-                self.add_instruction(f"push .{function_identifier}")
-                self.add_instruction("call")
-                self.coming_from_function_call = True
+                        self.add_instruction("alloc", "Allocate additional space in the current frame")
+                    self.add_instruction(f"push {expr_value}", f"Push initial value of {initial_identifier}")
+                    self.add_instruction(f"push {index}", f"Push index for {initial_identifier}")
+                    self.add_instruction(f"push {self.current_scope_level}",
+                                         f"Push scope level for {initial_identifier}")
+                    self.add_instruction("st", f"Store {initial_identifier} in current frame")
 
-            elif hasattr(factor, 'literal') and factor.literal is not None:
-                expr_value = factor.literal.value
 
-                self.symbol_table.add(initial_identifier, {
-                    'type': node.expr.Type,
-                    'level': self.current_scope_level,
-                    'index': len(self.symbol_table.scopes[-1])
-                })
-                self.symbol_table.lookup(initial_identifier)
-                index = self.symbol_table.scopes[-1][initial_identifier]['index']
-                self.add_instruction("push 1", f"Allocate space for {initial_identifier}")
-                if not self.frame_opened:
-                    self.add_instruction("oframe", "Create a new frame")
-                else:
-                    self.add_instruction("alloc", "Allocate additional space in the current frame")
-                self.add_instruction(f"push {expr_value}", f"Push initial value of {initial_identifier}")
-                self.add_instruction(f"push {index}", f"Push index for {initial_identifier}")
-                self.add_instruction(f"push {self.current_scope_level}", f"Push scope level for {initial_identifier}")
-                self.add_instruction("st", f"Store {initial_identifier} in current frame")
+                elif isinstance(factor, ASTArrayAccessNode):
+                    array_identifier = factor.identifier.lexeme
+                    index_expr = factor.index_expr
+                    self.symbol_table.add(initial_identifier, {
+                        'type': node.suffix.Type.value,
+                        'level': self.current_scope_level,
+                        'index': len(self.symbol_table.scopes[-1])
+                    })
+                    self.symbol_table.lookup(initial_identifier)
+                    index = self.symbol_table.scopes[-1][initial_identifier]['index']
+                    self.add_instruction("push 1")
+                    self.add_instruction("alloc")
+                    self.visit(index_expr)
+
+                    self.add_instruction(
+                        f"push +[{self.symbol_table.lookup(array_identifier)['index']}:{self.symbol_table.lookup(array_identifier)['level']}]",
+
+                        f"Push base address of array {array_identifier}")
+
+                    self.add_instruction(f"push {index}", f"Push index for {initial_identifier}")
+                    self.add_instruction(f"push {self.current_scope_level}",
+                                         f"Push scope level for {initial_identifier}")
+
+                    self.add_instruction("st", f"Store {initial_identifier} in current frame")
+
+    def visit_array_access_node(self, node):
+        var_info = self.symbol_table.lookup(node.identifier.lexeme)
+        self.visit(node.index_expr)
+        self.add_instruction(f"push {var_info['index']}", f"Push base index for array {node.identifier.lexeme}")
+        self.add_instruction(f"push {var_info['level']}", f"Push scope level for array {node.identifier.lexeme}")
+        self.add_instruction("push+ [0:0]", f"Access element of array {node.identifier.lexeme}")
+
+    def visit_variable_decl_array_node(self, node):
+        for literal in reversed(node.literals):
+            self.visit(literal)
+        array_size = node.size if node.size is not None else len(node.literals)
+        self.add_instruction(f"push {array_size}", "Push size of the array")
 
     def visit_assignment_node(self, node):
         identifier = node.id.lexeme
@@ -296,7 +357,6 @@ class CodeGenerationVisitor(ASTVisitor):
 
         function_instructions.append(f".{node.identifier.lexeme}")
 
-        # Temporarily switch to function_instructions
         old_instructions, self.instructions = self.instructions, function_instructions
         self.visit(node.formalParams)
         param_count = len(node.formalParams.formal_params)
@@ -331,7 +391,8 @@ class CodeGenerationVisitor(ASTVisitor):
             elif node.relational_op == '==':
                 self.add_instruction("eq", "Perform equal to operation")
             elif node.relational_op == '!=':
-                self.add_instruction("ne", "Perform not equal to operation")
+                self.add_instruction("eq")
+                self.add_instruction("not", "Perform not equal to operation")
             elif node.relational_op == '<=':
                 self.add_instruction("le", "Perform less than or equal to operation")
             elif node.relational_op == '>=':

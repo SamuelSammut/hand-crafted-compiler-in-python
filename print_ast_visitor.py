@@ -1,5 +1,6 @@
 from ast_visitor import ASTVisitor
 
+
 class PrintNodesVisitor(ASTVisitor):
     def __init__(self):
         self.name = "Print Tree Visitor"
@@ -21,7 +22,6 @@ class PrintNodesVisitor(ASTVisitor):
         print('\t' * self.tab_count, "Multiplicative operator::", term_node.multiplicative_op)
         self.inc_tab_count()
         term_node.factor1.accept(self)
-        # may need to accept multop later
         term_node.factor2.accept(self)
         self.dec_tab_count()
 
@@ -62,10 +62,6 @@ class PrintNodesVisitor(ASTVisitor):
         print('\t' * self.tab_count, "New Block => ")
         self.inc_tab_count()
 
-        ## hwen vistin blokc node create new scope in visitor
-        ## when getting out, pop scope form stack
-
-        ##create a vistior for type checing
         for st in block_node.stmts:
             st.accept(self)
 
@@ -98,7 +94,6 @@ class PrintNodesVisitor(ASTVisitor):
 
     def visit_literal_node(self, literal_node):
         self.node_count += 1
-        # print('\t' * self.tab_count, "Literal node => ")
         self.inc_tab_count()
         literal_node.literal.accept(self)
         self.dec_tab_count()
@@ -150,7 +145,6 @@ class PrintNodesVisitor(ASTVisitor):
 
     def visit_factor_node(self, factor_node):
         self.node_count += 1
-        # print('\t' * self.tab_count, "Factor node => ")
         self.inc_tab_count()
         factor_node.factor.accept(self)
         self.dec_tab_count()
@@ -160,7 +154,6 @@ class PrintNodesVisitor(ASTVisitor):
         print('\t' * self.tab_count, "Additive operator node => ", simple_expression_node.additive_op)
         self.inc_tab_count()
         simple_expression_node.term1.accept(self)
-        # may need to accept addtive op later
         simple_expression_node.term2.accept(self)
         self.dec_tab_count()
 
@@ -171,7 +164,6 @@ class PrintNodesVisitor(ASTVisitor):
             print('\t' * self.tab_count, "Relational operator::", expression_node.relational_op)
             self.inc_tab_count()
         expression_node.simple_expr1.accept(self)
-        # may need to accept reltainal later
         if expression_node.next_simple_expr is not None:
             expression_node.next_simple_expr.accept(self)
             self.dec_tab_count()
@@ -198,19 +190,10 @@ class PrintNodesVisitor(ASTVisitor):
 
     def visit_variable_declaration_suffix_node(self, variable_declaration_suffix_node):
         self.node_count += 1
-        # print('\t' * self.tab_count, "Variable declaration suffix node => ")
         self.inc_tab_count()
         variable_declaration_suffix_node.Type.accept(self)
         variable_declaration_suffix_node.expr.accept(self)
         self.dec_tab_count()
-
-    # def visit_variable_declaration_node(self, variable_declaration_node):
-    #     self.node_count += 1
-    #     print('\t' * self.tab_count, "Variable declaration node => ")
-    #     self.inc_tab_count()
-    #     variable_declaration_node.identifier.accept(self)
-    #     variable_declaration_node.expr.accept(self)
-    #     self.dec_tab_count()
 
     def visit_variable_declaration_node(self, variable_declaration_node):
         self.node_count += 1
