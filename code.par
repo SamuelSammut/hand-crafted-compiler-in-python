@@ -1,12 +1,11 @@
-let x:int = 5;
-let y:int = 10;
-
-if ((x < y) and (x!=y))
+for (let i:int = 0; i < 20; i = i+1)
 {
-    __print x;
+    if (i < 10)
+    {
+        __write i, (i*i), #000000;
+    }
+    else
+    {
+        __write i, (i*i), #ffffff;
+    }
 }
-else
-{
-    __print y;
-}
-

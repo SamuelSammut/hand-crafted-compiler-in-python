@@ -326,7 +326,6 @@ class CodeGenerationVisitor(ASTVisitor):
         self.visit(node.block)
         self.visit(node.assign)
         self.add_instruction(f"push #PC{loop_start_address - self.get_next_address()}", "Jump back to loop start")
-        print("current address: ", self.get_next_address())
         self.add_instruction("jmp", "Jump to loop start")
         loop_end_address = self.get_next_address()
         self.instructions[cjmp_index] = f"push #PC+{loop_end_address - cjmp_index}"
