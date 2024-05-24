@@ -2,6 +2,7 @@ from ast_visitor import ASTVisitor
 from symbol_table import SymbolTable
 from ast_node import *
 
+
 class SemanticVisitor(ASTVisitor):
     def __init__(self):
         self.return_encountered = None
@@ -96,7 +97,6 @@ class SemanticVisitor(ASTVisitor):
                 raise Exception(
                     f"Type mismatch: cannot assign type '{assigned_type}' to variable '{identifier}' of type '{declared_type}'")
 
-
     def visit_variable_decl_array_node(self, node):
         if node.size:
             array_size = int(node.size)
@@ -111,7 +111,6 @@ class SemanticVisitor(ASTVisitor):
                     f"Array contains mixed types. Expected all literals to be of type '{node.Type.value}', but found '{literal_type}'"
                 )
         return f'array_of_{node.Type.value}'
-
 
     def visit_array_access_node(self, node):
         identifier_type = self.visit(node.identifier)

@@ -459,13 +459,12 @@ class CodeGenerationVisitor(ASTVisitor):
         return self.visit(node.expr)
 
     def visit_unary_node(self, node):
-        expr_value = self.visit(node.expr)
         if node.unary_op == '-':
-            self.add_instruction(f"push {expr_value}", "Push operand for unary negation")
             self.add_instruction("neg", "Perform unary negation")
         elif node.unary_op == 'not':
-            self.add_instruction(f"push {expr_value}", "Push operand for logical NOT")
-            self.add_instruction("not", "Perform logical NOT")
+            self.add_instruction("not", "Perform logical NOT")#
+        expr_value = self.visit(node.expr)
+
         return expr_value
 
     def visit_identifier_node(self, node):

@@ -1,4 +1,5 @@
 # Class to wrap the different tokens we'll be using
+import csv
 import string
 from enum import Enum
 
@@ -140,7 +141,8 @@ def GetTokenTypeByFinalState(state, lexeme):
 class Lexer:
     def __init__(self):
         self.needed_letters_list = ["a_letter", "b_letter", "c_letter", "d_letter", "e_letter", "f_letter", "g_letter",
-                                    "h_letter", "i_letter", "l_letter", "m_letter", "n_letter", "o_letter", "p_letter", "r_letter",
+                                    "h_letter", "i_letter", "l_letter", "m_letter", "n_letter", "o_letter", "p_letter",
+                                    "r_letter",
                                     "s_letter", "t_letter",
                                     "u_letter", "w_letter", "x_letter", "y_letter"]
         self.operand_list = ["*", "/", "+", "-", "or", "and", "<", ">", "=", "!"]
@@ -574,7 +576,6 @@ class Lexer:
         self.Tx[117][self.lexeme_list.index("e_letter")] = 118
         self.Tx[118][self.lexeme_list.index("_")] = 108
 
-
         # Other keywords
 
         # Return
@@ -791,7 +792,7 @@ class Lexer:
 
         for letter in self.all_except_s:
             if letter != "n_letter":
-             self.Tx[160][self.lexeme_list.index(letter)] = 53
+                self.Tx[160][self.lexeme_list.index(letter)] = 53
         self.Tx[160][self.lexeme_list.index("letter")] = 53
         self.Tx[160][self.lexeme_list.index("digit")] = 53
         self.Tx[160][self.lexeme_list.index("_")] = 53
@@ -801,19 +802,19 @@ class Lexer:
         self.Tx[0][self.lexeme_list.index("e_letter")] = 141
 
         for letter in self.all_except_e:
-             self.Tx[141][self.lexeme_list.index(letter)] = 53
+            self.Tx[141][self.lexeme_list.index(letter)] = 53
         self.Tx[141][self.lexeme_list.index("letter")] = 53
         self.Tx[141][self.lexeme_list.index("digit")] = 53
         self.Tx[141][self.lexeme_list.index("_")] = 53
         self.Tx[141][self.lexeme_list.index("l_letter")] = 142
         for letter in self.all_except_s:
-             self.Tx[142][self.lexeme_list.index(letter)] = 53
+            self.Tx[142][self.lexeme_list.index(letter)] = 53
         self.Tx[142][self.lexeme_list.index("letter")] = 53
         self.Tx[142][self.lexeme_list.index("digit")] = 53
         self.Tx[142][self.lexeme_list.index("_")] = 53
         self.Tx[142][self.lexeme_list.index("s_letter")] = 143
         for letter in self.all_except_e:
-             self.Tx[143][self.lexeme_list.index(letter)] = 53
+            self.Tx[143][self.lexeme_list.index(letter)] = 53
         self.Tx[143][self.lexeme_list.index("letter")] = 53
         self.Tx[143][self.lexeme_list.index("digit")] = 53
         self.Tx[143][self.lexeme_list.index("_")] = 53
@@ -839,7 +840,6 @@ class Lexer:
         catch_letters = ["d", "g", "h", "m", "p", "s", "u", "x", "y"]
         for letter in catch_letters:
             self.Tx[0][self.lexeme_list.index(letter + "_letter")] = 53
-
 
     def AcceptingStates(self, state):
         try:
@@ -918,7 +918,6 @@ class Lexer:
                 state = stack.pop()
                 break
 
-
         if syntax_error:
             return Token(TokenType.VOID, "error"), "error"
 
@@ -943,5 +942,27 @@ class Lexer:
             else:
                 token, lexeme = Token(TokenType.END, "END"), "END"
 
-
         return tokens_list
+
+    def print_tx_table(self):
+        print("State".ljust(10), end="")
+        for col in self.lexeme_list:
+            print(col.ljust(10), end="")
+        print()
+
+        for row_idx, row in enumerate(self.Tx):
+            print(f"{row_idx}".ljust(10), end="")
+            for cell in row:
+                print(f"{cell}".ljust(10), end="")
+            print()
+
+    def export_tx_table_to_csv(self, file_name):
+        with open(file_name, mode='w', newline='') as file:
+            writer = csv.writer(file)
+
+            headers = ["State"] + self.lexeme_list
+            writer.writerow(headers)
+
+            for row_idx, row in enumerate(self.Tx):
+                writer.writerow([row_idx] + row)
+
