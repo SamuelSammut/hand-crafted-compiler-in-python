@@ -23,7 +23,5 @@ generated = code_generation.generate(parser.ASTroot)
 print("GENERATED CODE:")
 print(generated)
 
-print("Semantic analysis completed successfully!")
-
 
 
