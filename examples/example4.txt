@@ -1,0 +1,11 @@
+fun foo(x:int, y:int) -> int
+{
+    if(x>y)
+    {
+        return x;
+    }
+    else
+    {
+        x = x + 1;
+    }
+}

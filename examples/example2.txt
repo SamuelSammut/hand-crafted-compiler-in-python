@@ -1,0 +1,12 @@
+let x:int = 5;
+let y:int = 3;
+let z:int = 3;
+
+if(x>y)
+{
+    z = 2;
+}
+else
+{
+    z = 5;
+}

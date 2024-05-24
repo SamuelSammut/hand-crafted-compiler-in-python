@@ -1,0 +1,11 @@
+for (let i:int = 0; i < 10; i = i+1)
+{
+    if(i < 5)
+    {
+        __write i, (i*i), #000000;
+    }
+    else
+    {
+        __write i, (i*i), #ffffff;
+    }
+}

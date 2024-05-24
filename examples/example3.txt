@@ -1,0 +1,5 @@
+fun add(x:int, y:int) -> int
+{
+    let z : colour = #00000;
+    return z;
+}

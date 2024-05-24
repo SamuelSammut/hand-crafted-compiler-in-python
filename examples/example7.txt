@@ -1,0 +1,6 @@
+fun add(x:int, y:int) -> int
+{
+    return x+y;
+}
+let z:int = add(5, 5);
+__print z;
